@@ -177,45 +177,116 @@ public class ChessApplication {
 	}
 
 	private void handleMouseReleased(MouseEvent e) {
-		if (heldPiece == Piece.INVALID) return;
-		if (e.getX() < 0 || e.getY() < 0 || e.getX() >= WIDTH || e.getY() >= HEIGHT) return;
+		if (!isValidClick(e)) {
+			resetHeldPiece();
+			return;
+		}
 
 		int file = e.getX() / CELL_SIZE;
 		int rankUI = e.getY() / CELL_SIZE;
 		int rank = GRID_SIZE - 1 - rankUI;
 
-		boolean moveOk = movesForPiece.stream().anyMatch(move -> move.efile == file && move.erank == rank);
-
-		if (moveOk) {
-			board.set(file, rank, heldPiece);
-			if (Piece.isType(heldPiece, Piece.PAWN) && file + rank * GRID_SIZE == board.enPassantTarget) board.set(board.enPassantTarget % 8, startRank, Piece.INVALID);
-
-			if (Math.abs(startRank - rank) == 2 && Piece.isType(heldPiece, Piece.PAWN)) {
-				board.enPassantTarget = startFile + ((startRank + rank) / 2) * GRID_SIZE;
-			} else {
-				board.enPassantTarget = -1;
-			}
-
-			if (startFile != file || startRank != rank) {
-				lastStartFile = startFile;
-				lastStartRank = startRank;
-				lastEndFile = file;
-				lastEndRank = rank;
-			}
-
-			board.colorToMove = Piece.inverse(board.colorToMove);
-		} else {
+		if (!isMoveAllowed(file, rank)) {
 			board.set(startFile, startRank, heldPiece);
+			resetHeldPiece();
+			chessPanel.repaint();
+			return;
 		}
 
+		handleMove(file, rank);
+		resetHeldPiece();
+		chessPanel.repaint();
+	}
+
+	private void handleMove(int file, int rank) {
+		if (isPromotion(file, rank)) {
+			board.set(file, rank, Piece.getColor(heldPiece) | Piece.QUEEN);
+		} else {
+			board.set(file, rank, heldPiece);
+
+			if (Piece.isColor(heldPiece, Piece.WHITE)) {
+				if (Piece.isType(heldPiece, Piece.KING)) board.whiteKingMove = true;
+				else if (Piece.isType(heldPiece, Piece.ROOK)) {
+					if (startFile == 0) board.whiteRQMove = true;
+					else board.whiteRKMove = true;
+				}
+			} else {
+				if (Piece.isType(heldPiece, Piece.KING)) board.blackKingMove = true;
+				else if (Piece.isType(heldPiece, Piece.ROOK)) {
+					if (startFile == 0) board.blackRQMove = true;
+					else board.blackRKMove = true;
+				}
+			}
+
+			if (isEnPassant(file, rank)) {
+				int capturedRank = (Piece.isColor(heldPiece, Piece.WHITE)) ? rank - 1 : rank + 1;
+				board.set(file, capturedRank, Piece.INVALID);
+			} else if (isCastle(file, rank)) {
+				boolean left = file < startFile;
+				board.set(file + (left ? 1 : -1), rank, board.get(left ? 0 : GRID_SIZE - 1, rank));
+				board.set(left ? 0 : GRID_SIZE - 1, rank, Piece.INVALID);
+				if (Piece.isColor(heldPiece, Piece.WHITE)) {
+					board.whiteKingMove = true;
+					board.whiteRKMove = true;
+					board.whiteRQMove = true;
+				} else {
+					board.blackKingMove = true;
+					board.blackRKMove = true;
+					board.blackRQMove = true;
+				}
+			}
+		}
+
+		updateEnPassantTarget(file, rank);
+		updateLastMove(file, rank);
+		board.colorToMove = Piece.inverse(board.colorToMove);
+	}
+
+	public boolean isValidClick(MouseEvent e) {
+		return heldPiece != Piece.INVALID && e.getX() >= 0 && e.getY() >= 0 && e.getX() < WIDTH && e.getY() < HEIGHT;
+	}
+
+	public boolean isMoveAllowed(int file, int rank) {
+		return movesForPiece.stream().anyMatch(move -> move.efile == file && move.erank == rank);
+	}
+
+	public boolean isCastle(int file, int rank) {
+		return Piece.isType(heldPiece, Piece.KING) && Math.abs(startFile - file) == 2;
+	}
+
+	public boolean isPromotion(int file, int rank) {
+		return Piece.isType(heldPiece, Piece.PAWN) && ((Piece.isColor(heldPiece, Piece.WHITE) && rank == 7) || (Piece.isColor(heldPiece, heldPiece) && rank == 0));
+	}
+
+	public boolean isEnPassant(int file, int rank) {
+		return Piece.isType(heldPiece, Piece.PAWN) && file + rank * GRID_SIZE == board.enPassantTarget;
+	}
+
+	public void updateEnPassantTarget(int file, int rank) {
+		if (Piece.isType(heldPiece, Piece.PAWN) &&
+			Math.abs(startRank - rank) == 2) {
+			board.enPassantTarget = file + ((startRank + rank) / 2) * GRID_SIZE;
+		} else {
+			board.enPassantTarget = -1;
+		}
+	}
+
+	public void updateLastMove(int file, int rank) {
+		if (startFile != file || startRank != rank) {
+			lastStartFile = startFile;
+			lastStartRank = startRank;
+			lastEndFile = file;
+			lastEndRank = rank;
+		}
+	}
+
+	private void resetHeldPiece() {
 		heldPiece = Piece.INVALID;
 		mouseX = -1;
 		mouseY = -1;
 		movesForPiece.clear();
 		startFile = -1;
 		startRank = -1;
-
-		chessPanel.repaint();
 	}
 
 	public static void main(String[] args) {

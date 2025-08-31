@@ -4,8 +4,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class Moves {
-	public static int[] directionOffsets = new int[]{ 8, -8, -1, 1, 7, -7, 9, -9 };
-	public static int[] knightOffsets = new int[]{ 6, -6, 10, -10, 15, -15, 17, -17 };
+	public static int[] directionOffsets = new int[] { 8, -8, -1, 1, 7, -7, 9, -9 };
+	public static int[] knightOffsets = new int[] { 6, -6, 10, -10, 15, -15, 17, -17 };
 	public static int[][] numSquaresToEdge = new int[ChessApplication.GRID_SIZE * ChessApplication.GRID_SIZE][8];
 
 	private static Board board;
@@ -25,7 +25,7 @@ public class Moves {
 
 				int index = board.index(file, rank);
 
-				numSquaresToEdge[index] = new int[]{ numUp, numDown, numLeft, numRight, Math.min(numUp, numLeft), Math.min(numDown, numRight), Math.min(numUp, numRight), Math.min(numDown, numLeft) };
+				numSquaresToEdge[index] = new int[] { numUp, numDown, numLeft, numRight, Math.min(numUp, numLeft), Math.min(numDown, numRight), Math.min(numUp, numRight), Math.min(numDown, numLeft) };
 			}
 		}
 	}
@@ -92,6 +92,45 @@ public class Moves {
 				moves.add(new Move(startSquare, targetSquare));
 			}
 		}
+
+		// inside generateKingMoves
+
+		if (Piece.isColor(piece, Piece.WHITE)) {
+			int rank = 0; 
+
+			if (!board.whiteKingMove && !board.whiteRKMove) {
+				if (board.get(5, rank) == Piece.INVALID &&
+					board.get(6, rank) == Piece.INVALID) {
+					moves.add(new Move(startSquare, file + 2 + rank * 8));
+				}
+			}
+
+			if (!board.whiteKingMove && !board.whiteRQMove) {
+				if (board.get(1, rank) == Piece.INVALID &&
+					board.get(2, rank) == Piece.INVALID &&
+					board.get(3, rank) == Piece.INVALID) {
+					moves.add(new Move(startSquare, file - 2 + rank * 8));
+				}
+			}
+		} else {
+			int rank = 7; 
+
+			if (!board.blackKingMove && !board.blackRKMove) {
+				if (board.get(5, rank) == Piece.INVALID &&
+					board.get(6, rank) == Piece.INVALID) {
+					moves.add(new Move(startSquare, file + 2 + rank * 8));
+				}
+			}
+
+			if (!board.blackKingMove && !board.blackRQMove) {
+				if (board.get(1, rank) == Piece.INVALID &&
+					board.get(2, rank) == Piece.INVALID &&
+					board.get(3, rank) == Piece.INVALID) {
+					moves.add(new Move(startSquare, file - 2 + rank * 8));
+				}
+			}
+		}
+
 
 		return moves;
 	}

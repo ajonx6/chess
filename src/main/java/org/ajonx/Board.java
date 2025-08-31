@@ -10,13 +10,20 @@ public class Board {
 	public int colorToMove = Piece.WHITE;
 
 	public int enPassantTarget = -1;
+	public boolean whiteKingMove = false;
+	public boolean whiteRKMove = false;
+	public boolean whiteRQMove = false;
+	public boolean blackKingMove = false;
+	public boolean blackRKMove = false;
+	public boolean blackRQMove = false;
 
 	public Board(int width, int height) {
 		this.width = width;
 		this.height = height;
 		this.board = new int[width * height];
 
-		loadFromFEN("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+		// loadFromFEN("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+		loadFromFEN("r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 0 1");
 		//		loadFromFEN("rqbkn3/8/8/8/8/8/8/3NKBQR w KQkq - 0 1");
 	}
 

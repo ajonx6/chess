@@ -202,21 +202,9 @@ public class ChessApplication {
 		if (isPromotion(file, rank)) {
 			board.set(file, rank, Piece.getColor(heldPiece) | Piece.QUEEN);
 		} else {
+			handleTakingRooks(file, rank);
 			board.set(file, rank, heldPiece);
-
-			if (Piece.isColor(heldPiece, Piece.WHITE)) {
-				if (Piece.isType(heldPiece, Piece.KING)) board.whiteKingMove = true;
-				else if (Piece.isType(heldPiece, Piece.ROOK)) {
-					if (startFile == 0) board.whiteRQMove = true;
-					else board.whiteRKMove = true;
-				}
-			} else {
-				if (Piece.isType(heldPiece, Piece.KING)) board.blackKingMove = true;
-				else if (Piece.isType(heldPiece, Piece.ROOK)) {
-					if (startFile == 0) board.blackRQMove = true;
-					else board.blackRKMove = true;
-				}
-			}
+			handlePieceFlags();
 
 			if (isEnPassant(file, rank)) {
 				int capturedRank = (Piece.isColor(heldPiece, Piece.WHITE)) ? rank - 1 : rank + 1;
@@ -225,15 +213,7 @@ public class ChessApplication {
 				boolean left = file < startFile;
 				board.set(file + (left ? 1 : -1), rank, board.get(left ? 0 : GRID_SIZE - 1, rank));
 				board.set(left ? 0 : GRID_SIZE - 1, rank, Piece.INVALID);
-				if (Piece.isColor(heldPiece, Piece.WHITE)) {
-					board.whiteKingMove = true;
-					board.whiteRKMove = true;
-					board.whiteRQMove = true;
-				} else {
-					board.blackKingMove = true;
-					board.blackRKMove = true;
-					board.blackRQMove = true;
-				}
+				handleCastlePieceFlags();
 			}
 		}
 
@@ -268,6 +248,46 @@ public class ChessApplication {
 			board.enPassantTarget = file + ((startRank + rank) / 2) * GRID_SIZE;
 		} else {
 			board.enPassantTarget = -1;
+		}
+	}
+
+	public void handleTakingRooks(int file, int rank) {
+		int piece = board.get(file, rank);
+		if (!Piece.isType(piece, Piece.ROOK)) return;
+		if (Piece.isColor(piece, Piece.WHITE)) {
+			if (file == 0 && rank == 0) board.whiteRQMove = true;
+			else if (file == GRID_SIZE - 1 && rank == 0) board.whiteRKMove = true;
+		} else {
+			if (file == 0 && rank == GRID_SIZE - 1) board.blackRQMove = true;
+			else if (file == GRID_SIZE - 1 && rank == GRID_SIZE - 1) board.blackRKMove = true;
+		}
+	}
+
+	public void handlePieceFlags() {
+		if (Piece.isColor(heldPiece, Piece.WHITE)) {
+			if (Piece.isType(heldPiece, Piece.KING)) board.whiteKingMove = true;
+			else if (Piece.isType(heldPiece, Piece.ROOK)) {
+				if (startFile == 0 && startRank == 0) board.whiteRQMove = true;
+				else if (startFile == GRID_SIZE - 1 && startRank == 0) board.whiteRKMove = true;
+			}
+		} else {
+			if (Piece.isType(heldPiece, Piece.KING)) board.blackKingMove = true;
+			else if (Piece.isType(heldPiece, Piece.ROOK)) {
+				if (startFile == 0 && startRank == GRID_SIZE - 1) board.blackRQMove = true;
+				else if (startFile == GRID_SIZE - 1 && startRank == GRID_SIZE - 1) board.blackRKMove = true;
+			}
+		}
+	}
+
+	public void handleCastlePieceFlags() {
+		if (Piece.isColor(heldPiece, Piece.WHITE)) {
+			board.whiteKingMove = true;
+			board.whiteRKMove = true;
+			board.whiteRQMove = true;
+		} else {
+			board.blackKingMove = true;
+			board.blackRKMove = true;
+			board.blackRQMove = true;
 		}
 	}
 

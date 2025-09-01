@@ -130,8 +130,7 @@ public class Moves {
 				}
 			}
 		}
-
-
+		
 		return moves;
 	}
 

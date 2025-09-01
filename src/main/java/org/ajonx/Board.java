@@ -22,8 +22,8 @@ public class Board {
 		this.height = height;
 		this.board = new int[width * height];
 
-		// loadFromFEN("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
-		loadFromFEN("r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 0 1");
+		loadFromFEN("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+		// loadFromFEN("r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 0 1");
 		//		loadFromFEN("rqbkn3/8/8/8/8/8/8/3NKBQR w KQkq - 0 1");
 	}
 

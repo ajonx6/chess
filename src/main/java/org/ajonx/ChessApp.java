@@ -1,5 +1,10 @@
 package org.ajonx;
 
+import org.ajonx.cpu.CPU;
+import org.ajonx.cpu.RandomCPU;
+import org.ajonx.games.GameManager;
+import org.ajonx.games.GameState;
+
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.KeyEvent;
@@ -7,32 +12,33 @@ import java.awt.event.KeyListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
-import java.util.ArrayList;
+import java.util.*;
 import java.util.List;
 
-public class ChessApplication {
+public class ChessApp {
 	public static final int GRID_SIZE = 8;
-	public static final int CELL_SIZE = 150;
+	public static final int CELL_SIZE = 75;
 	public static final int WIDTH = CELL_SIZE * GRID_SIZE;
 	public static final int HEIGHT = CELL_SIZE * GRID_SIZE;
 
 	private JFrame frame;
-	private JPanel chessPanel;
+	public JPanel chessPanel;
 	private Board board;
+	private MoveHandler moveHandler;
+	private UIState uiState;
 
 	private int mouseX = -1, mouseY = -1;
 	private boolean mouseWasPressed = false;
-
-	private int lastStartFile = -1, lastStartRank = -1;
-	private int lastEndFile = -1, lastEndRank = -1;
-	private int startFile = -1, startRank = -1;
-	private int heldPiece = Piece.INVALID;
+	private Map<Integer, List<Moves.Move>> movesPerSquare;
 	private List<Moves.Move> movesForPiece = new ArrayList<>();
 
-	public ChessApplication() {
+	public ChessApp() {
 		PieceImages.init("pieces.png", 6, 2, PieceImages.getDefaultPieceList());
+		uiState = new UIState();
 		board = new Board(GRID_SIZE, GRID_SIZE);
-		Moves.init(board);
+		moveHandler = new MoveHandler(board);
+		Moves.init(board, moveHandler);
+		movesPerSquare = Moves.generateLegalMoveMap();
 
 		frame = new JFrame("Chess");
 		frame.setUndecorated(true);
@@ -91,7 +97,7 @@ public class ChessApplication {
 			public void mouseMoved(MouseEvent e) {
 				mouseX = e.getX();
 				mouseY = e.getY();
-				if (heldPiece != Piece.INVALID) {
+				if (uiState.heldPiece != Piece.INVALID) {
 					chessPanel.repaint();
 				}
 			}
@@ -100,7 +106,7 @@ public class ChessApplication {
 			public void mouseDragged(MouseEvent e) {
 				mouseX = e.getX();
 				mouseY = e.getY();
-				if (heldPiece != Piece.INVALID) {
+				if (uiState.heldPiece != Piece.INVALID) {
 					chessPanel.repaint();
 				}
 			}
@@ -121,7 +127,7 @@ public class ChessApplication {
 
 				Color color = getSquareColor(file, rank);
 				g.setColor(color);
-				g.fillRect(uiX, uiY, ChessApplication.CELL_SIZE, ChessApplication.CELL_SIZE);
+				g.fillRect(uiX, uiY, ChessApp.CELL_SIZE, ChessApp.CELL_SIZE);
 
 				int piece = board.get(board.index(file, rank));
 				if (piece != Piece.INVALID) {
@@ -131,8 +137,8 @@ public class ChessApplication {
 			}
 		}
 
-		if (heldPiece != Piece.INVALID) {
-			BufferedImage pieceImage = PieceImages.images.get(heldPiece);
+		if (uiState.heldPiece != Piece.INVALID) {
+			BufferedImage pieceImage = PieceImages.images.get(uiState.heldPiece);
 			int imgX = mouseX - CELL_SIZE / 2;
 			int imgY = mouseY - CELL_SIZE / 2;
 			g.drawImage(pieceImage, imgX, imgY, CELL_SIZE, CELL_SIZE, null);
@@ -148,7 +154,8 @@ public class ChessApplication {
 			if (file == move.efile && rank == move.erank) return Colors.getColor(Colors.MOVE_COLORS, isLight);
 		}
 
-		if (file == startFile && rank == startRank) return Colors.getColor(Colors.PREV_START_COLORS, isLight);
+		if (file == uiState.startFile && rank == uiState.startRank)
+			return Colors.getColor(Colors.PREV_START_COLORS, isLight);
 		// if (file == lastStartFile && rank == lastStartRank) return Colors.getColor(Colors.PREV_START_COLORS, isLight);
 		// if (file == lastEndFile && rank == lastEndRank) return Colors.getColor(Colors.PREV_END_COLORS, isLight);
 
@@ -156,7 +163,7 @@ public class ChessApplication {
 	}
 
 	private void handleMousePressed(MouseEvent e) {
-		if (heldPiece != Piece.INVALID) return;
+		if (uiState.heldPiece != Piece.INVALID) return;
 
 		int file = e.getX() / CELL_SIZE;
 		int rankUI = e.getY() / CELL_SIZE;
@@ -165,11 +172,16 @@ public class ChessApplication {
 		int pieceToHold = board.get(board.index(file, rank));
 		if (pieceToHold == Piece.INVALID || !Piece.isColor(pieceToHold, board.colorToMove)) return;
 
+
+		movesForPiece.clear();
+		if (movesPerSquare.get(board.index(file, rank)) != null) {
+			movesForPiece.addAll(movesPerSquare.get(board.index(file, rank)));
+		}
+
 		board.set(board.index(file, rank), Piece.INVALID);
-		movesForPiece.addAll(Moves.generateMoves(file, rank, pieceToHold));
-		heldPiece = pieceToHold;
-		startFile = file;
-		startRank = rank;
+		uiState.heldPiece = pieceToHold;
+		uiState.startFile = file;
+		uiState.startRank = rank;
 		mouseX = e.getX();
 		mouseY = e.getY();
 
@@ -187,129 +199,45 @@ public class ChessApplication {
 		int rank = GRID_SIZE - 1 - rankUI;
 
 		if (!isMoveAllowed(file, rank)) {
-			board.set(startFile, startRank, heldPiece);
+			board.set(uiState.startFile, uiState.startRank, uiState.heldPiece);
 			resetHeldPiece();
 			chessPanel.repaint();
 			return;
 		}
 
-		handleMove(file, rank);
+		moveHandler.makeMove(uiState.startFile, uiState.startRank, file, rank, uiState.heldPiece);
 		resetHeldPiece();
+		// updateLastMove(file, rank);
 		chessPanel.repaint();
 	}
 
-	private void handleMove(int file, int rank) {
-		if (isPromotion(file, rank)) {
-			board.set(file, rank, Piece.getColor(heldPiece) | Piece.QUEEN);
-		} else {
-			handleTakingRooks(file, rank);
-			board.set(file, rank, heldPiece);
-			handlePieceFlags();
-
-			if (isEnPassant(file, rank)) {
-				int capturedRank = (Piece.isColor(heldPiece, Piece.WHITE)) ? rank - 1 : rank + 1;
-				board.set(file, capturedRank, Piece.INVALID);
-			} else if (isCastle(file, rank)) {
-				boolean left = file < startFile;
-				board.set(file + (left ? 1 : -1), rank, board.get(left ? 0 : GRID_SIZE - 1, rank));
-				board.set(left ? 0 : GRID_SIZE - 1, rank, Piece.INVALID);
-				handleCastlePieceFlags();
-			}
-		}
-
-		updateEnPassantTarget(file, rank);
-		updateLastMove(file, rank);
-		board.colorToMove = Piece.inverse(board.colorToMove);
-	}
-
 	public boolean isValidClick(MouseEvent e) {
-		return heldPiece != Piece.INVALID && e.getX() >= 0 && e.getY() >= 0 && e.getX() < WIDTH && e.getY() < HEIGHT;
+		return uiState.heldPiece != Piece.INVALID && e.getX() >= 0 && e.getY() >= 0 && e.getX() < WIDTH && e.getY() < HEIGHT;
 	}
 
 	public boolean isMoveAllowed(int file, int rank) {
 		return movesForPiece.stream().anyMatch(move -> move.efile == file && move.erank == rank);
 	}
 
-	public boolean isCastle(int file, int rank) {
-		return Piece.isType(heldPiece, Piece.KING) && Math.abs(startFile - file) == 2;
-	}
-
-	public boolean isPromotion(int file, int rank) {
-		return Piece.isType(heldPiece, Piece.PAWN) && ((Piece.isColor(heldPiece, Piece.WHITE) && rank == 7) || (Piece.isColor(heldPiece, heldPiece) && rank == 0));
-	}
-
-	public boolean isEnPassant(int file, int rank) {
-		return Piece.isType(heldPiece, Piece.PAWN) && file + rank * GRID_SIZE == board.enPassantTarget;
-	}
-
-	public void updateEnPassantTarget(int file, int rank) {
-		if (Piece.isType(heldPiece, Piece.PAWN) &&
-			Math.abs(startRank - rank) == 2) {
-			board.enPassantTarget = file + ((startRank + rank) / 2) * GRID_SIZE;
-		} else {
-			board.enPassantTarget = -1;
-		}
-	}
-
-	public void handleTakingRooks(int file, int rank) {
-		int piece = board.get(file, rank);
-		if (!Piece.isType(piece, Piece.ROOK)) return;
-		if (Piece.isColor(piece, Piece.WHITE)) {
-			if (file == 0 && rank == 0) board.whiteRQMove = true;
-			else if (file == GRID_SIZE - 1 && rank == 0) board.whiteRKMove = true;
-		} else {
-			if (file == 0 && rank == GRID_SIZE - 1) board.blackRQMove = true;
-			else if (file == GRID_SIZE - 1 && rank == GRID_SIZE - 1) board.blackRKMove = true;
-		}
-	}
-
-	public void handlePieceFlags() {
-		if (Piece.isColor(heldPiece, Piece.WHITE)) {
-			if (Piece.isType(heldPiece, Piece.KING)) board.whiteKingMove = true;
-			else if (Piece.isType(heldPiece, Piece.ROOK)) {
-				if (startFile == 0 && startRank == 0) board.whiteRQMove = true;
-				else if (startFile == GRID_SIZE - 1 && startRank == 0) board.whiteRKMove = true;
-			}
-		} else {
-			if (Piece.isType(heldPiece, Piece.KING)) board.blackKingMove = true;
-			else if (Piece.isType(heldPiece, Piece.ROOK)) {
-				if (startFile == 0 && startRank == GRID_SIZE - 1) board.blackRQMove = true;
-				else if (startFile == GRID_SIZE - 1 && startRank == GRID_SIZE - 1) board.blackRKMove = true;
-			}
-		}
-	}
-
-	public void handleCastlePieceFlags() {
-		if (Piece.isColor(heldPiece, Piece.WHITE)) {
-			board.whiteKingMove = true;
-			board.whiteRKMove = true;
-			board.whiteRQMove = true;
-		} else {
-			board.blackKingMove = true;
-			board.blackRKMove = true;
-			board.blackRQMove = true;
-		}
-	}
-
-	public void updateLastMove(int file, int rank) {
-		if (startFile != file || startRank != rank) {
-			lastStartFile = startFile;
-			lastStartRank = startRank;
-			lastEndFile = file;
-			lastEndRank = rank;
-		}
-	}
-
-	private void resetHeldPiece() {
-		heldPiece = Piece.INVALID;
+	public void resetHeldPiece() {
+		uiState.resetHeldPiece();
+		movesPerSquare = Moves.generateLegalMoveMap();
+		movesForPiece.clear();
 		mouseX = -1;
 		mouseY = -1;
-		movesForPiece.clear();
-		startFile = -1;
-		startRank = -1;
 	}
 
 	public static void main(String[] args) {
-		new ChessApplication();
+		ChessApp chessApp = new ChessApp();
+
+		GameState gameState = new GameState(chessApp, chessApp.board, chessApp.moveHandler);
+		GameManager gameManager = new GameManager(gameState);
+		CPU white = null;
+		// CPU white = new RandomCPU(gameManager, Piece.WHITE);
+		CPU black = new RandomCPU(gameManager, Piece.BLACK);
+		gameManager.setWhiteCPU(white);
+		gameManager.setBlackCPU(black);
+
+		gameManager.startGame();
 	}
 }

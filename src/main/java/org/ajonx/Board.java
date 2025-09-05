@@ -56,6 +56,14 @@ public class Board {
 		System.out.println();
 	}
 
+	public int indexOfKing(int colorToFind) {
+		for (int i = 0; i < board.length; i++) {
+			int piece = board[i];
+			if (Piece.isType(piece, Piece.KING) && Piece.isColor(piece, colorToFind)) return i;
+		}
+		return -1;
+	}
+
 	public int index(int file, int rank) {
 		return rank * width + file;
 	}

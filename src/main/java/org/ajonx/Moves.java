@@ -1,33 +1,60 @@
 package org.ajonx;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 public class Moves {
 	public static int[] directionOffsets = new int[] { 8, -8, -1, 1, 7, -7, 9, -9 };
 	public static int[] knightOffsets = new int[] { 6, -6, 10, -10, 15, -15, 17, -17 };
-	public static int[][] numSquaresToEdge = new int[ChessApplication.GRID_SIZE * ChessApplication.GRID_SIZE][8];
+	public static int[][] numSquaresToEdge = new int[ChessApp.GRID_SIZE * ChessApp.GRID_SIZE][8];
 
 	private static Board board;
+	private static MoveHandler moveHandler;
 
-	public static void init(Board board) {
+	public static void init(Board board, MoveHandler moveHandler) {
 		Moves.board = board;
+		Moves.moveHandler = moveHandler;
 		createDistanceArray();
 	}
 
 	public static void createDistanceArray() {
 		for (int rank = 0; rank < 8; rank++) {
 			for (int file = 0; file < 8; file++) {
-				int numUp = ChessApplication.GRID_SIZE - 1 - rank;
+				int numUp = ChessApp.GRID_SIZE - 1 - rank;
 				int numDown = rank;
 				int numLeft = file;
-				int numRight = ChessApplication.GRID_SIZE - 1 - file;
+				int numRight = ChessApp.GRID_SIZE - 1 - file;
 
 				int index = board.index(file, rank);
 
 				numSquaresToEdge[index] = new int[] { numUp, numDown, numLeft, numRight, Math.min(numUp, numLeft), Math.min(numDown, numRight), Math.min(numUp, numRight), Math.min(numDown, numLeft) };
 			}
 		}
+	}
+
+	public static Map<Integer, List<Move>> generateLegalMoveMap() {
+		return generateLegalMoves().stream().collect(Collectors.groupingBy(m -> board.index(m.sfile, m.srank)));
+	}
+
+	public static List<Move> generateLegalMoves() {
+		List<Move> pseudoLegalMoves = generateMoves();
+		List<Move> legalMoves = new ArrayList<>();
+		int movingColor = board.colorToMove;
+
+		for (Move move : pseudoLegalMoves) {
+			MoveState prevState = moveHandler.makeTemporaryMove(move);
+			int indexOfKing = board.indexOfKing(movingColor);
+			List<Move> responses = generateMoves();
+			if (responses.stream().noneMatch(m -> board.index(m.efile, m.erank) == indexOfKing)) {
+				legalMoves.add(move);
+			}
+			moveHandler.undoMove(prevState);
+		}
+
+		return legalMoves;
 	}
 
 	public static List<Move> generateMoves() {
@@ -41,6 +68,10 @@ public class Moves {
 						moves.addAll(generateSliderMoves(board.index(file, rank), piece));
 					} else if (Piece.isType(piece, Piece.KING)) {
 						moves.addAll(generateKingMoves(board.index(file, rank), piece));
+					} else if (Piece.isType(piece, Piece.KNIGHT)) {
+						moves.addAll(generateKnightMoves(board.index(file, rank), piece));
+					} else if (Piece.isType(piece, Piece.PAWN)) {
+						moves.addAll(generatePawnMoves(board.index(file, rank), piece));
 					}
 				}
 			}
@@ -57,26 +88,26 @@ public class Moves {
 		else return new ArrayList<>();
 	}
 
-	public static List<Move> generateSliderMoves(int startSquare, int piece) {
+	public static List<Move> generateSliderMoves(int startSquare, int movingPiece) {
 		List<Move> moves = new ArrayList<>();
-		int startDirIndex = Piece.isType(piece, Piece.BISHOP) ? 4 : 0;
-		int endDirIndex = Piece.isType(piece, Piece.ROOK) ? 4 : 8;
+		int startDirIndex = Piece.isType(movingPiece, Piece.BISHOP) ? 4 : 0;
+		int endDirIndex = Piece.isType(movingPiece, Piece.ROOK) ? 4 : 8;
 
 		for (int dirIndex = startDirIndex; dirIndex < endDirIndex; dirIndex++) {
 			for (int n = 0; n < numSquaresToEdge[startSquare][dirIndex]; n++) {
 				int targetSquare = startSquare + directionOffsets[dirIndex] * (n + 1);
 				int pieceOnTarget = board.get(targetSquare);
 
-				if (Piece.isColor(pieceOnTarget, Piece.getColor(piece))) break;
+				if (Piece.matchColor(pieceOnTarget, movingPiece)) break;
 				moves.add(new Move(startSquare, targetSquare));
-				if (Piece.isOppositeColor(pieceOnTarget, Piece.getColor(piece))) break;
+				if (Piece.matchOpposite(pieceOnTarget, movingPiece)) break;
 			}
 		}
 
 		return moves;
 	}
 
-	public static List<Move> generateKingMoves(int startSquare, int piece) {
+	public static List<Move> generateKingMoves(int startSquare, int movingPiece) {
 		List<Move> moves = new ArrayList<>();
 		int file = startSquare % 8;
 
@@ -88,15 +119,13 @@ public class Moves {
 
 			int pieceOnTarget = board.get(targetSquare);
 
-			if (!Piece.isColor(pieceOnTarget, Piece.getColor(piece))) {
+			if (!Piece.matchColor(pieceOnTarget, movingPiece)) {
 				moves.add(new Move(startSquare, targetSquare));
 			}
 		}
 
-		// inside generateKingMoves
-
-		if (Piece.isColor(piece, Piece.WHITE)) {
-			int rank = 0; 
+		if (Piece.isColor(movingPiece, Piece.WHITE)) {
+			int rank = 0;
 
 			if (!board.whiteKingMove && !board.whiteRKMove) {
 				if (board.get(5, rank) == Piece.INVALID &&
@@ -113,7 +142,7 @@ public class Moves {
 				}
 			}
 		} else {
-			int rank = 7; 
+			int rank = 7;
 
 			if (!board.blackKingMove && !board.blackRKMove) {
 				if (board.get(5, rank) == Piece.INVALID &&
@@ -130,11 +159,11 @@ public class Moves {
 				}
 			}
 		}
-		
+
 		return moves;
 	}
 
-	public static List<Move> generateKnightMoves(int startSquare, int piece) {
+	public static List<Move> generateKnightMoves(int startSquare, int movingPiece) {
 		List<Move> moves = new ArrayList<>();
 		int file = startSquare % 8;
 		int rank = startSquare / 8;
@@ -150,7 +179,7 @@ public class Moves {
 
 			int pieceOnTarget = board.get(targetSquare);
 
-			if (!Piece.isColor(pieceOnTarget, Piece.getColor(piece))) {
+			if (!Piece.matchColor(pieceOnTarget, movingPiece)) {
 				moves.add(new Move(startSquare, targetSquare));
 			}
 		}
@@ -167,7 +196,7 @@ public class Moves {
 		int direction = Piece.isColor(piece, Piece.WHITE) ? 1 : -1;
 		int nextRank = rank + direction;
 
-		if (nextRank >= ChessApplication.GRID_SIZE || nextRank < 0) return moves;
+		if (nextRank >= ChessApp.GRID_SIZE || nextRank < 0) return moves;
 
 		if (board.get(file, nextRank) == Piece.INVALID) {
 			moves.add(new Move(file, rank, file, nextRank));
@@ -180,10 +209,10 @@ public class Moves {
 		int diag2 = file + 1;
 		int targetRank = rank + direction;
 
-		if (diag1 >= 0 && Piece.isOppositeColor(board.get(diag1, targetRank), Piece.getColor(piece))) {
+		if (diag1 >= 0 && Piece.matchOpposite(board.get(diag1, targetRank), piece)) {
 			moves.add(new Move(file, rank, diag1, targetRank));
 		}
-		if (diag2 < ChessApplication.GRID_SIZE && Piece.isOppositeColor(board.get(diag2, targetRank), Piece.getColor(piece))) {
+		if (diag2 < ChessApp.GRID_SIZE && Piece.matchOpposite(board.get(diag2, targetRank), piece)) {
 			moves.add(new Move(file, rank, diag2, targetRank));
 		}
 
@@ -196,7 +225,6 @@ public class Moves {
 
 		return moves;
 	}
-
 
 	public static class Move {
 		public int sfile, srank;

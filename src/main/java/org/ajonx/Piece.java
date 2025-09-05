@@ -28,6 +28,18 @@ public class Piece {
 		return (piece & 0b11000) == color;
 	}
 
+	public static boolean matchColor(int piece1, int piece2) {
+		return getColor(piece1) == getColor(piece2);
+	}
+
+	public static boolean matchOpposite(int piece1, int piece2) {
+		int c1 = getColor(piece1), c2 = getColor(piece2);
+
+		if (c1 == WHITE) return c2 == BLACK;
+		else if (c1 == BLACK) return c2 == WHITE;
+		else return c2 == INVALID;
+	}
+
 	public static boolean isOppositeColor(int piece, int color) {
 		int c = getColor(piece);
 		if (c == WHITE) return color == BLACK;
@@ -37,7 +49,8 @@ public class Piece {
 
 	public static int inverse(int color) {
 		if (color == WHITE) return BLACK;
-		else return WHITE;
+		else if (color == BLACK) return WHITE;
+		else return INVALID;
 	}
 
 	public static boolean isSlider(int piece) {

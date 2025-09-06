@@ -46,6 +46,81 @@ public class Board {
 		}
 	}
 
+	public boolean isImmaterial() {
+		List<Pair<Integer, Integer>> pieces = getAllPieces();
+
+		int nonKingCount = 0;
+		int whiteBishopSquare = -1, blackBishopSquare = -1;
+		int whiteKnightSquare = -1, blackKnightSquare = -1;
+
+		for (Pair<Integer, Integer> pieceData : pieces) {
+			int piece = pieceData.first();
+			int index = pieceData.second();
+
+			if (piece == Piece.INVALID) continue;
+			int type = Piece.getType(piece);
+			if (type == Piece.KING) continue;
+
+			nonKingCount++;
+
+			if (type == Piece.PAWN || type == Piece.ROOK || type == Piece.QUEEN) return false;
+
+			if (type == Piece.BISHOP) {
+				if (Piece.isColor(piece, Piece.WHITE)) {
+					if (whiteBishopSquare >= 0) return false;
+					else whiteBishopSquare = index;
+				} else {
+					if (blackBishopSquare >= 0) return false;
+					else blackBishopSquare = index;
+				}
+			}
+
+			if (type == Piece.KNIGHT) {
+				if (Piece.isColor(piece, Piece.WHITE)) {
+					if (whiteKnightSquare >= 0) return false;
+					else whiteKnightSquare = index;
+				} else {
+					if (blackKnightSquare >= 0) return false;
+					else blackKnightSquare = index;
+				}
+			}
+		}
+
+
+		// Case 1: King vs King
+		if (nonKingCount == 0) return true;
+		// Case 2: King + minor vs King
+		if (nonKingCount == 1) return true;
+
+		// Case 3: King + Bishop vs King + Bishop
+		if (nonKingCount == 2 && whiteBishopSquare >= 0 && blackBishopSquare >= 0) {
+			int wbf = whiteBishopSquare % width;
+			int wbr = whiteBishopSquare / width;
+			int bbf = blackBishopSquare % width;
+			int bbr = blackBishopSquare / width;
+			return (wbf + wbr) % 2 == (bbf + bbr) % 2;
+		}
+
+		// Case 4: King + Knight vs King + Knight
+		if (nonKingCount == 2 && whiteKnightSquare >= 0 && blackKnightSquare >= 0) return true;
+
+		// Case 5: others
+		return false;
+	}
+
+	public List<Pair<Integer, Integer>> getAllPieces() {
+		List<Pair<Integer, Integer>> pieces = new ArrayList<>();
+
+		for (int file = 0; file < width; file++) {
+			for (int rank = 0; rank < height; rank++) {
+				int piece = get(file, rank);
+				if (!Piece.isType(piece, Piece.INVALID)) pieces.add(new Pair<>(piece, index(file, rank)));
+			}
+		}
+
+		return pieces;
+	}
+
 	public void printBoard() {
 		for (int rank = 0; rank < height; rank++) {
 			for (int file = 0; file < width; file++) {
@@ -54,6 +129,19 @@ public class Board {
 			System.out.println();
 		}
 		System.out.println();
+	}
+
+	public void resetGame() {
+		loadFromFEN("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+		colorToMove = Piece.WHITE;
+
+		enPassantTarget = -1;
+		whiteKingMove = false;
+		whiteRKMove = false;
+		whiteRQMove = false;
+		blackKingMove = false;
+		blackRKMove = false;
+		blackRQMove = false;
 	}
 
 	public int indexOfKing(int colorToFind) {

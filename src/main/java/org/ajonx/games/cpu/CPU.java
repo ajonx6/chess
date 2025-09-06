@@ -1,8 +1,7 @@
-package org.ajonx.cpu;
+package org.ajonx.games.cpu;
 
-import org.ajonx.Moves;
-import org.ajonx.Piece;
 import org.ajonx.games.GameManager;
+import org.ajonx.moves.Move;
 
 import java.util.List;
 import java.util.Map;
@@ -11,7 +10,7 @@ public abstract class CPU implements Runnable {
 	protected Thread thread;
 	protected GameManager gameManager;
 	protected boolean running = true;
-	protected int delayMs = 1;
+	protected int delayMs = 10;
 	protected int color;
 
 	public CPU(GameManager gameManager, int color) {
@@ -21,15 +20,17 @@ public abstract class CPU implements Runnable {
 	}
 
 	public void start() {
+		if (gameManager.isHeadless()) return;
 		thread.start();
 	}
 
 	public void stop() {
+		if (gameManager.isHeadless()) return;
 		running = false;
 	}
 
 	public void run() {
-		while (running && !gameManager.state.isGameOver()) {
+		while (running && !gameManager.isGameOver) {
 			// Wait until it's this CPU's turn
 			if (!isMyTurn()) {
 				try {
@@ -43,7 +44,7 @@ public abstract class CPU implements Runnable {
 			if (!running) return;
 
 			try {
-				Thread.sleep(delayMs); // optional thinking delay
+				Thread.sleep(delayMs); // Simulate thinking
 			} catch (InterruptedException e) {
 				Thread.currentThread().interrupt();
 			}
@@ -51,17 +52,20 @@ public abstract class CPU implements Runnable {
 			if (!running) return;
 
 			// Get legal moves for this CPU's color
-			Map<Integer, List<Moves.Move>> movesPerSquare = gameManager.getLegalMoves();
+			Map<Integer, List<Move>> movesPerSquare = gameManager.getLegalMoves();
 			if (movesPerSquare == null) return;
-			Moves.Move chosenMove = pickMove(movesPerSquare);
 
+			Move chosenMove = pickMove(movesPerSquare);
 			if (running && chosenMove != null) {
-				gameManager.makeMove(chosenMove);
+				int piece = gameManager.instances.board.get(chosenMove.sfile, chosenMove.srank);
+				gameManager.runTurn(chosenMove, piece);
 			}
 		}
 	}
 
-	public abstract Moves.Move pickMove(Map<Integer, List<Moves.Move>> movesPerSquare);
+	public abstract Move pickMove(Map<Integer, List<Move>> movesPerSquare);
 
-	protected abstract boolean isMyTurn();
+	public abstract boolean isMyTurn();
+
+	public abstract CPU copy(GameManager gameManager, int color);
 }

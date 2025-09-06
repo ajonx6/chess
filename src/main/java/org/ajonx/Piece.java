@@ -32,19 +32,19 @@ public class Piece {
 		return getColor(piece1) == getColor(piece2);
 	}
 
-	public static boolean matchOpposite(int piece1, int piece2) {
-		int c1 = getColor(piece1), c2 = getColor(piece2);
-
-		if (c1 == WHITE) return c2 == BLACK;
-		else if (c1 == BLACK) return c2 == WHITE;
-		else return c2 == INVALID;
-	}
-
 	public static boolean isOppositeColor(int piece, int color) {
 		int c = getColor(piece);
 		if (c == WHITE) return color == BLACK;
 		else if (c == BLACK) return color == WHITE;
 		else return false;
+	}
+
+	public static boolean matchOppositeColor(int piece1, int piece2) {
+		int c1 = getColor(piece1), c2 = getColor(piece2);
+
+		if (c1 == WHITE) return c2 == BLACK;
+		else if (c1 == BLACK) return c2 == WHITE;
+		else return c2 == INVALID;
 	}
 
 	public static int inverse(int color) {
@@ -59,6 +59,7 @@ public class Piece {
 	}
 
 	public static int getPieceFromChar(char c) {
+		c = Character.toLowerCase(c);
 		if (c == 'k') return KING;
 		else if (c == 'q') return QUEEN;
 		else if (c == 'b') return BISHOP;

@@ -1,4 +1,8 @@
-package org.ajonx;
+package org.ajonx.moves;
+
+import org.ajonx.Board;
+import org.ajonx.ChessApp;
+import org.ajonx.Piece;
 
 public class MoveHandler {
 	private Board board;
@@ -7,7 +11,7 @@ public class MoveHandler {
 		this.board = board;
 	}
 
-	public MoveState makeTemporaryMove(Moves.Move move) {
+	public MoveState makeTemporaryMove(Move move) {
 		int startPiece = board.get(move.sfile, move.srank);
 		int capturedPiece = board.get(move.efile, move.erank);
 		int enPassantBefore = board.enPassantTarget;

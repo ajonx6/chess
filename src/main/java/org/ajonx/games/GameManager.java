@@ -1,8 +1,10 @@
 package org.ajonx.games;
 
-import org.ajonx.Moves;
 import org.ajonx.Piece;
-import org.ajonx.cpu.CPU;
+import org.ajonx.SoundPlayer;
+import org.ajonx.games.cpu.CPU;
+import org.ajonx.moves.Move;
+import org.ajonx.moves.Moves;
 
 import java.util.List;
 import java.util.Map;
@@ -10,11 +12,15 @@ import java.util.Map;
 public class GameManager {
 	public CPU whiteCPU;
 	public CPU blackCPU;
+	public GameInstances instances;
+	public boolean isGameOver;
 
-	public GameState state;
+	private boolean headless = false;
 
-	public GameManager(GameState state) {
-		this.state = state;
+	public GameManager() {}
+
+	public void setInstances(GameInstances instances) {
+		this.instances = instances;
 	}
 
 	public void setWhiteCPU(CPU cpu) {
@@ -26,25 +32,86 @@ public class GameManager {
 	}
 
 	public void startGame() {
-		if (whiteCPU != null) whiteCPU.start();
-		if (blackCPU != null) blackCPU.start();
+		if (!headless) {
+			if (whiteCPU != null) whiteCPU.start();
+			if (blackCPU != null) blackCPU.start();
+		}
 	}
 
-	public void makeMove(Moves.Move move) {
-		int piece = state.board.get(move.sfile, move.srank);
+	public void endGame(GameState state) {
+		isGameOver = true;
+		if (headless) return;
+			
+		String opponentString = instances.board.colorToMove == Piece.WHITE ? "Black" : "White";
 
-		state.moveHandler.makeMove(move.sfile, move.srank, move.efile, move.erank, piece);
-		state.chessApp.resetHeldPiece();
-		state.chessApp.chessPanel.repaint();
+		if (state == GameState.CHECKMATE) {
+			System.out.println(opponentString + " wins!");
+		} else if (state == GameState.STALEMATE) {
+			System.out.println("Draw by stalemate");
+		} else if (state == GameState.DRAW_IMMATERIAL) {
+			System.out.println("Draw by insufficient material");
+		}
+
+		if (whiteCPU != null) whiteCPU.stop();
+		if (blackCPU != null) blackCPU.stop();
 	}
 
-	public Map<Integer, List<Moves.Move>> getLegalMoves() {
-		Map<Integer, List<Moves.Move>> legalMoves = Moves.generateLegalMoveMap();
+	public void runTurn(Move move, int piece) {
+		boolean isTake = instances.board.get(move.efile, move.erank) != Piece.INVALID;
+		boolean isCastle = instances.moveHandler.isCastle(move.sfile, move.efile, piece);
+
+		if (!headless) {
+			if (instances.board.colorToMove == Piece.WHITE) System.out.print(move + " ");
+			else System.out.println(move);
+		}
+
+		instances.moveHandler.makeMove(move.sfile, move.srank, move.efile, move.erank, piece);
+
+		if (!headless) {
+			instances.chessApp.resetHeldPiece();
+			instances.chessApp.chessPanel.repaint();
+		}
+
+		int kingIndex = instances.board.indexOfKing(instances.board.colorToMove);
+		boolean inCheck = Moves.isKingInCheck(kingIndex);
+
+		GameState state = evaluateGameState();
+		if (state != GameState.ONGOING) {
+			endGame(state);
+			if (!headless) SoundPlayer.gameEnd();
+		} else if (!headless) {
+			if (inCheck) SoundPlayer.check();
+			else if (isCastle) SoundPlayer.castle();
+			else if (isTake) SoundPlayer.take();
+			else SoundPlayer.move();
+		}
+	}
+
+	public GameState evaluateGameState() {
+		Map<Integer, List<Move>> legalMoves = Moves.generateLegalMoveMap();
+
+		int kingIndex = instances.board.indexOfKing(instances.board.colorToMove);
+		boolean inCheck = Moves.isKingInCheck(kingIndex);
+
 		if (legalMoves.isEmpty()) {
-			if (whiteCPU != null) whiteCPU.stop();
-			if (blackCPU != null) blackCPU.stop();
-			System.out.println(state.board.colorToMove == Piece.WHITE ? "Black wins!" : "White wins!");
-			return null;
-		} else return legalMoves;
+			if (inCheck) return GameState.CHECKMATE;
+			else return GameState.STALEMATE;
+		}
+
+		if (instances.board.isImmaterial()) return GameState.DRAW_IMMATERIAL;
+
+		return GameState.ONGOING;
+	}
+
+	public Map<Integer, List<Move>> getLegalMoves() {
+		return Moves.generateLegalMoveMap();
+	}
+
+	public void headless() {
+		headless = true;
+	}
+
+	public boolean isHeadless() {
+		return headless;
 	}
 }

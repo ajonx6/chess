@@ -1,7 +1,7 @@
-package org.ajonx;
+package org.ajonx.moves;
 
 public class MoveState {
-	public Moves.Move move;
+	public Move move;
 	public int startPiece;
 	public int capturedPiece;
 	public int enPassantBefore;
@@ -14,7 +14,7 @@ public class MoveState {
 	public int rookEndFile, rookEndRank;
 	public int rookStartPieceBefore, rookEndPieceBefore;
 
-	public MoveState(Moves.Move move, int startPiece, int capturedPiece, int enPassantBefore, boolean wk, boolean wrq, boolean wrk, boolean bk, boolean brq, boolean brk, int colorToMoveBefore) {
+	public MoveState(Move move, int startPiece, int capturedPiece, int enPassantBefore, boolean wk, boolean wrq, boolean wrk, boolean bk, boolean brq, boolean brk, int colorToMoveBefore) {
 		this.move = move;
 		this.startPiece = startPiece;
 		this.capturedPiece = capturedPiece;
@@ -28,7 +28,7 @@ public class MoveState {
 		this.colorToMoveBefore = colorToMoveBefore;
 	}
 
-	public MoveState(Moves.Move move, int startPiece, int capturedPiece, int enPassantBefore, boolean wk, boolean wrq, boolean wrk, boolean bk, boolean brq, boolean brk, int colorToMoveBefore, int rookStartFile, int rookStartRank, int rookEndFile, int rookEndRank, int rookStartPieceBefore, int rookEndPieceBefore) {
+	public MoveState(Move move, int startPiece, int capturedPiece, int enPassantBefore, boolean wk, boolean wrq, boolean wrk, boolean bk, boolean brq, boolean brk, int colorToMoveBefore, int rookStartFile, int rookStartRank, int rookEndFile, int rookEndRank, int rookStartPieceBefore, int rookEndPieceBefore) {
 		this.move = move;
 		this.startPiece = startPiece;
 		this.capturedPiece = capturedPiece;

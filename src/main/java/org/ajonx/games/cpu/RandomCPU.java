@@ -1,7 +1,7 @@
-package org.ajonx.cpu;
+package org.ajonx.games.cpu;
 
-import org.ajonx.Moves;
 import org.ajonx.games.GameManager;
+import org.ajonx.moves.Move;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -15,8 +15,8 @@ public class RandomCPU extends CPU {
 		super(gameManager, color);
 	}
 
-	public Moves.Move pickMove(Map<Integer, List<Moves.Move>> movesPerSquare) {
-		List<Moves.Move> allMoves = new ArrayList<>();
+	public Move pickMove(Map<Integer, List<Move>> movesPerSquare) {
+		List<Move> allMoves = new ArrayList<>();
 		for (int square : movesPerSquare.keySet()) {
 			allMoves.addAll(movesPerSquare.get(square));
 		}
@@ -24,7 +24,12 @@ public class RandomCPU extends CPU {
 	}
 
 	@Override
-	protected boolean isMyTurn() {
-		return color == gameManager.state.board.colorToMove;
+	public boolean isMyTurn() {
+		return color == gameManager.instances.board.colorToMove;
+	}
+
+	@Override
+	public CPU copy(GameManager gameManager, int color) {
+		return new RandomCPU(gameManager, color);
 	}
 }

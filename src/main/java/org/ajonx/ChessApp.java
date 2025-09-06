@@ -1,9 +1,9 @@
 package org.ajonx;
 
-import org.ajonx.cpu.CPU;
-import org.ajonx.cpu.RandomCPU;
 import org.ajonx.games.GameManager;
-import org.ajonx.games.GameState;
+import org.ajonx.moves.Move;
+import org.ajonx.moves.MoveHandler;
+import org.ajonx.moves.Moves;
 
 import javax.swing.*;
 import java.awt.*;
@@ -12,8 +12,9 @@ import java.awt.event.KeyListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
-import java.util.*;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 public class ChessApp {
 	public static final int GRID_SIZE = 8;
@@ -26,11 +27,12 @@ public class ChessApp {
 	private Board board;
 	private MoveHandler moveHandler;
 	private UIState uiState;
+	private GameManager gameManager;
 
 	private int mouseX = -1, mouseY = -1;
 	private boolean mouseWasPressed = false;
-	private Map<Integer, List<Moves.Move>> movesPerSquare;
-	private List<Moves.Move> movesForPiece = new ArrayList<>();
+	private Map<Integer, List<Move>> movesPerSquare;
+	private List<Move> movesForPiece = new ArrayList<>();
 
 	public ChessApp() {
 		PieceImages.init("pieces.png", 6, 2, PieceImages.getDefaultPieceList());
@@ -50,6 +52,10 @@ public class ChessApp {
 		createChessPanel();
 
 		frame.setVisible(true);
+	}
+
+	public void setGameManager(GameManager gameManager) {
+		this.gameManager = gameManager;
 	}
 
 	public void createChessPanel() {
@@ -130,7 +136,7 @@ public class ChessApp {
 				g.fillRect(uiX, uiY, ChessApp.CELL_SIZE, ChessApp.CELL_SIZE);
 
 				int piece = board.get(board.index(file, rank));
-				if (piece != Piece.INVALID) {
+				if (piece != Piece.INVALID && !(file == uiState.startFile && rank == uiState.startRank && uiState.heldPiece != Piece.INVALID)) {
 					BufferedImage pieceImage = PieceImages.images.get(piece);
 					g.drawImage(pieceImage, uiX, uiY, CELL_SIZE, CELL_SIZE, null);
 				}
@@ -150,7 +156,7 @@ public class ChessApp {
 	private Color getSquareColor(int file, int rank) {
 		boolean isLight = (file + rank) % 2 == 1;
 
-		for (Moves.Move move : movesForPiece) {
+		for (Move move : movesForPiece) {
 			if (file == move.efile && rank == move.erank) return Colors.getColor(Colors.MOVE_COLORS, isLight);
 		}
 
@@ -170,15 +176,12 @@ public class ChessApp {
 		int rank = GRID_SIZE - 1 - rankUI;
 
 		int pieceToHold = board.get(board.index(file, rank));
-		if (pieceToHold == Piece.INVALID || !Piece.isColor(pieceToHold, board.colorToMove)) return;
+		if (pieceToHold == Piece.INVALID || Piece.isOppositeColor(pieceToHold, board.colorToMove)) return;
 
+		resetHeldPiece();
+		List<Move> moves = movesPerSquare.get(board.index(file, rank));
+		if (moves != null) movesForPiece.addAll(moves);
 
-		movesForPiece.clear();
-		if (movesPerSquare.get(board.index(file, rank)) != null) {
-			movesForPiece.addAll(movesPerSquare.get(board.index(file, rank)));
-		}
-
-		board.set(board.index(file, rank), Piece.INVALID);
 		uiState.heldPiece = pieceToHold;
 		uiState.startFile = file;
 		uiState.startRank = rank;
@@ -189,7 +192,7 @@ public class ChessApp {
 	}
 
 	private void handleMouseReleased(MouseEvent e) {
-		if (!isValidClick(e)) {
+		if (!isValidClick(e) || uiState.heldPiece == Piece.INVALID) {
 			resetHeldPiece();
 			return;
 		}
@@ -199,16 +202,14 @@ public class ChessApp {
 		int rank = GRID_SIZE - 1 - rankUI;
 
 		if (!isMoveAllowed(file, rank)) {
-			board.set(uiState.startFile, uiState.startRank, uiState.heldPiece);
 			resetHeldPiece();
 			chessPanel.repaint();
 			return;
 		}
 
-		moveHandler.makeMove(uiState.startFile, uiState.startRank, file, rank, uiState.heldPiece);
+		Move move = new Move(uiState.startFile, uiState.startRank, file, rank);
+		gameManager.runTurn(move, uiState.heldPiece);
 		resetHeldPiece();
-		// updateLastMove(file, rank);
-		chessPanel.repaint();
 	}
 
 	public boolean isValidClick(MouseEvent e) {
@@ -227,17 +228,15 @@ public class ChessApp {
 		mouseY = -1;
 	}
 
-	public static void main(String[] args) {
-		ChessApp chessApp = new ChessApp();
+	public Board getBoard() {
+		return board;
+	}
 
-		GameState gameState = new GameState(chessApp, chessApp.board, chessApp.moveHandler);
-		GameManager gameManager = new GameManager(gameState);
-		CPU white = null;
-		// CPU white = new RandomCPU(gameManager, Piece.WHITE);
-		CPU black = new RandomCPU(gameManager, Piece.BLACK);
-		gameManager.setWhiteCPU(white);
-		gameManager.setBlackCPU(black);
+	public MoveHandler getMoveHandler() {
+		return moveHandler;
+	}
 
-		gameManager.startGame();
+	public UIState getUiState() {
+		return uiState;
 	}
 }

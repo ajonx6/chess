@@ -1,7 +1,7 @@
 package org.ajonx.games;
 
 import org.ajonx.Board;
-import org.ajonx.ChessApp;
+import org.ajonx.Window;
 import org.ajonx.Piece;
 import org.ajonx.games.cpu.CPU;
 import org.ajonx.moves.Move;
@@ -25,7 +25,7 @@ public class SessionManager {
 	public GameManager setupGame() {
 		GameManager game = new GameManager();
 
-		Board board = new Board(ChessApp.GRID_SIZE, ChessApp.GRID_SIZE);
+		Board board = new Board(Window.GRID_SIZE, Window.GRID_SIZE);
 		MoveHandler moveHandler = new MoveHandler(board);
 		Moves.init(board, moveHandler);
 

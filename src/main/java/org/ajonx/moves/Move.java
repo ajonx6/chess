@@ -1,6 +1,8 @@
 package org.ajonx.moves;
 
-public class Move {
+import java.util.Objects;
+
+public class Move implements Comparable<Move> {
 	public int sfile, srank;
 	public int efile, erank;
 
@@ -22,5 +24,27 @@ public class Move {
 		String start = "" + (char) ('A' + sfile) + (srank + 1);
 		String end = "" + (char) ('A' + efile) + (erank + 1);
 		return start + "->" + end;
+	}
+
+	@Override
+	public boolean equals(Object o) {
+		if (this == o) return true;
+		if (o == null || getClass() != o.getClass()) return false;
+		Move move = (Move) o;
+		return sfile == move.sfile && srank == move.srank && efile == move.efile && erank == move.erank;
+	}
+
+	@Override
+	public int hashCode() {
+		return Objects.hash(sfile, srank, efile, erank);
+	}
+
+	@Override
+	public int compareTo(Move o) {
+		if (sfile != o.sfile) return Integer.compare(sfile, o.sfile);
+		if (srank != o.srank) return Integer.compare(srank, o.srank);
+		if (efile != o.efile) return Integer.compare(efile, o.efile);
+		if (erank != o.erank) return Integer.compare(erank, o.erank);
+		return 0;
 	}
 }

@@ -16,7 +16,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-public class ChessApp {
+public class Window {
 	public static final int GRID_SIZE = 8;
 	public static final int CELL_SIZE = 75;
 	public static final int WIDTH = CELL_SIZE * GRID_SIZE;
@@ -34,7 +34,7 @@ public class ChessApp {
 	private Map<Integer, List<Move>> movesPerSquare;
 	private List<Move> movesForPiece = new ArrayList<>();
 
-	public ChessApp() {
+	public Window() {
 		PieceImages.init("pieces.png", 6, 2, PieceImages.getDefaultPieceList());
 		uiState = new UIState();
 		board = new Board(GRID_SIZE, GRID_SIZE);
@@ -133,7 +133,7 @@ public class ChessApp {
 
 				Color color = getSquareColor(file, rank);
 				g.setColor(color);
-				g.fillRect(uiX, uiY, ChessApp.CELL_SIZE, ChessApp.CELL_SIZE);
+				g.fillRect(uiX, uiY, Window.CELL_SIZE, Window.CELL_SIZE);
 
 				int piece = board.get(board.index(file, rank));
 				if (piece != Piece.INVALID && !(file == uiState.startFile && rank == uiState.startRank && uiState.heldPiece != Piece.INVALID)) {

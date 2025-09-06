@@ -4,20 +4,29 @@ import org.ajonx.Board;
 import org.ajonx.Window;
 import org.ajonx.Piece;
 
-public class MoveHandler {
+import java.util.ArrayList;
+import java.util.List;
+import java.util.zip.CheckedInputStream;
+
+public class MoveHandlerTemp {
+	public List<Move> history = new ArrayList<>();
+
 	private Board board;
 
-	public MoveHandler(Board board) {
+	public MoveHandlerTemp(Board board) {
 		this.board = board;
 	}
 
 	public MoveState makeTemporaryMove(Move move) {
 		int startPiece = board.get(move.sfile, move.srank);
+		System.out.println("B: " + Piece.toString(startPiece));
 		int capturedPiece = board.get(move.efile, move.erank);
 		int enPassantBefore = board.enPassantTarget;
 		boolean wk = board.whiteKingMove, wrq = board.whiteRQMove, wrk = board.whiteRKMove;
 		boolean bk = board.blackKingMove, brq = board.blackRQMove, brk = board.blackRKMove;
 		int colorToMoveBefore = board.colorToMove;
+
+		history.add(move);
 
 		if (isCastle(move.sfile, move.efile, startPiece)) {
 			boolean left = move.efile < move.sfile;
@@ -54,11 +63,14 @@ public class MoveHandler {
 			board.set(state.rookStartFile, state.rookStartRank, state.rookStartPieceBefore);
 			board.set(state.rookEndFile, state.rookEndRank, state.rookEndPieceBefore);
 		}
+		history.remove(history.size() - 1);
 	}
 
 
 	public void makeMove(int startFile, int startRank, int endFile, int endRank, int heldPiece) {
+		int takenPiece = board.get(endFile, endRank);
 		board.set(board.index(startFile, startRank), Piece.INVALID);
+		updatePieceMap(new Move(startFile, startRank, endFile, endRank), heldPiece, takenPiece);
 
 		if (isPromotion(endRank, heldPiece)) {
 			board.set(endFile, endRank, Piece.getColor(heldPiece) | Piece.QUEEN);
@@ -80,6 +92,24 @@ public class MoveHandler {
 
 		updateEnPassantTarget(startFile, startRank, endRank, heldPiece);
 		board.colorToMove = Piece.inverse(board.colorToMove);
+	}
+
+	public void updatePieceMap(Move move, int movingPiece, int takenPiece) {
+		int type = Piece.getType(movingPiece);
+		int colorIndex = Piece.isColor(movingPiece, Piece.WHITE) ? 0 : 1;
+
+		int startIndex = board.index(move.sfile, move.srank);
+		int endIndex = board.index(move.efile, move.erank);
+
+		board.pieceMap.get(type).get(colorIndex).remove((Integer) startIndex);
+
+		if (takenPiece != Piece.INVALID) {
+			int capturedType = Piece.getType(takenPiece);
+			int capturedColor = Piece.isColor(takenPiece, Piece.WHITE) ? 0 : 1;
+			board.pieceMap.get(capturedType).get(capturedColor).remove((Integer) endIndex);
+		}
+
+		board.pieceMap.get(type).get(colorIndex).add(endIndex);
 	}
 
 	public boolean isCastle(int startFile, int endFile, int piece) {

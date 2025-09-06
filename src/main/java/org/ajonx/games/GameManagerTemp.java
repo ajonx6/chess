@@ -9,7 +9,7 @@ import org.ajonx.moves.Moves;
 import java.util.List;
 import java.util.Map;
 
-public class GameManager {
+public class GameManagerTemp {
 	public CPU whiteCPU;
 	public CPU blackCPU;
 	public GameInstances instances;
@@ -17,7 +17,7 @@ public class GameManager {
 
 	private boolean headless = false;
 
-	public GameManager() {}
+	public GameManagerTemp() {}
 
 	public void setInstances(GameInstances instances) {
 		this.instances = instances;
@@ -41,7 +41,7 @@ public class GameManager {
 	public void endGame(GameState state) {
 		isGameOver = true;
 		if (headless) return;
-			
+
 		String opponentString = instances.board.colorToMove == Piece.WHITE ? "Black" : "White";
 
 		if (state == GameState.CHECKMATE) {
@@ -57,7 +57,8 @@ public class GameManager {
 	}
 
 	public void runTurn(Move move, int piece) {
-		boolean isTake = instances.board.get(move.efile, move.erank) != Piece.INVALID;
+		int movingPiece = instances.board.get(move.sfile, move.srank);
+		int takenPiece = instances.board.get(move.efile, move.erank);
 		boolean isCastle = instances.moveHandler.isCastle(move.sfile, move.efile, piece);
 
 		if (!headless) {
@@ -82,16 +83,35 @@ public class GameManager {
 		} else if (!headless) {
 			if (inCheck) SoundPlayer.check();
 			else if (isCastle) SoundPlayer.castle();
-			else if (isTake) SoundPlayer.take();
+			else if (takenPiece != Piece.INVALID) SoundPlayer.take();
 			else SoundPlayer.move();
 		}
 	}
+
+	// public void updatePieceMap(Move move, int movingPiece, int takenPiece) {
+	// 	int type = Piece.getType(movingPiece);
+	// 	int colorIndex = Piece.isColor(movingPiece, Piece.WHITE) ? 0 : 1;
+	//
+	// 	int startIndex = instances.board.index(move.sfile, move.srank);
+	// 	int endIndex = instances.board.index(move.efile, move.erank);
+	//
+	// 	instances.board.pieceMap.get(type).get(colorIndex).remove((Integer) startIndex);
+	//
+	// 	if (takenPiece != Piece.INVALID) {
+	// 		int capturedType = Piece.getType(takenPiece);
+	// 		int capturedColor = Piece.isColor(takenPiece, Piece.WHITE) ? 0 : 1;
+	// 		instances.board.pieceMap.get(capturedType).get(capturedColor).remove((Integer) endIndex);
+	// 	}
+	//
+	// 	instances.board.pieceMap.get(type).get(colorIndex).add(endIndex);
+	// }
 
 	public GameState evaluateGameState() {
 		Map<Integer, List<Move>> legalMoves = Moves.generateLegalMoveMap();
 
 		int kingIndex = instances.board.indexOfKing(instances.board.colorToMove);
 		boolean inCheck = Moves.isKingInCheck(kingIndex);
+		// System.out.println(legalMoves + ", " + inCheck);
 
 		if (legalMoves.isEmpty()) {
 			if (inCheck) return GameState.CHECKMATE;

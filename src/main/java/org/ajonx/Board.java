@@ -1,13 +1,16 @@
 package org.ajonx;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class Board {
 	public int width;
 	public int height;
 	public int[] board;
 	public int colorToMove = Piece.WHITE;
+	public Map<Integer, List<List<Integer>>> pieceMap = new HashMap<>();
 
 	public int enPassantTarget = -1;
 	public boolean whiteKingMove = false;
@@ -23,8 +26,7 @@ public class Board {
 		this.board = new int[width * height];
 
 		loadFromFEN("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
-		// loadFromFEN("r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 0 1");
-		//		loadFromFEN("rqbkn3/8/8/8/8/8/8/3NKBQR w KQkq - 0 1");
+		// loadFromFEN("4k3/8/2r5/4R3/B7/8/8/4K3 b KQkq - 0 1");
 	}
 
 	public void loadFromFEN(String fen) {
@@ -40,10 +42,24 @@ public class Board {
 				} else {
 					int pieceColor = Character.isUpperCase(c) ? Piece.WHITE : Piece.BLACK;
 					int pieceType = Piece.getPieceFromChar(Character.toLowerCase(c));
-					set(file++, height - 1 - rank, pieceColor | pieceType);
+					set(file, height - 1 - rank, pieceColor | pieceType);
+
+					if (!pieceMap.containsKey(pieceType)) {
+						List<Integer> white = new ArrayList<>();
+						List<Integer> black = new ArrayList<>();
+						List<List<Integer>> indices = new ArrayList<>();
+						indices.add(white);
+						indices.add(black);
+
+						pieceMap.put(pieceType, indices);
+					}
+					pieceMap.get(pieceType).get(pieceColor == Piece.WHITE ? 0 : 1).add(index(file++, height - 1 - rank));
 				}
 			}
 		}
+
+		if (sections[1].equals("w")) colorToMove = Piece.WHITE;
+		else colorToMove = Piece.BLACK;
 	}
 
 	public boolean isImmaterial() {
@@ -111,10 +127,13 @@ public class Board {
 	public List<Pair<Integer, Integer>> getAllPieces() {
 		List<Pair<Integer, Integer>> pieces = new ArrayList<>();
 
-		for (int file = 0; file < width; file++) {
-			for (int rank = 0; rank < height; rank++) {
-				int piece = get(file, rank);
-				if (!Piece.isType(piece, Piece.INVALID)) pieces.add(new Pair<>(piece, index(file, rank)));
+		for (int pieceType : pieceMap.keySet()) {
+			List<List<Integer>> indiciesColors = pieceMap.get(pieceType);
+			for (int color = 0; color < 2; color++) {
+				List<Integer> indicies = indiciesColors.get(color);
+				for (int index : indicies) {
+					pieces.add(new Pair<>(pieceType | Piece.colorFromIndex(color), index));
+				}
 			}
 		}
 
@@ -122,7 +141,7 @@ public class Board {
 	}
 
 	public void printBoard() {
-		for (int rank = 0; rank < height; rank++) {
+		for (int rank = height - 1; rank >= 0; rank--) {
 			for (int file = 0; file < width; file++) {
 				System.out.print(Piece.toString(get(file, rank)));
 			}
@@ -145,6 +164,7 @@ public class Board {
 	}
 
 	public int indexOfKing(int colorToFind) {
+		// return pieceMap.get(Piece.KING).get(Piece.colorIndex(colorToFind)).get(0);
 		for (int i = 0; i < board.length; i++) {
 			int piece = board[i];
 			if (Piece.isType(piece, Piece.KING) && Piece.isColor(piece, colorToFind)) return i;

@@ -84,4 +84,12 @@ public class Piece {
 
 		return white ? pieceChar.toUpperCase() : pieceChar;
 	}
+
+	public static int indexFromColor(int colorToMove) {
+		return colorToMove == WHITE ? 0 : 1;
+	}
+
+	public static int colorFromIndex(int index) {
+		return index == 0 ? WHITE : BLACK;
+	}
 }

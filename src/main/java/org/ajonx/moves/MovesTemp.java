@@ -4,12 +4,10 @@ import org.ajonx.Board;
 import org.ajonx.Window;
 import org.ajonx.Piece;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
-public class Moves {
+public class MovesTemp {
 	public static int[] directionOffsets = new int[] { 8, -8, -1, 1, 7, -7, 9, -9 };
 	public static int[] knightOffsets = new int[] { 6, -6, 10, -10, 15, -15, 17, -17 };
 	public static int[][] numSquaresToEdge = new int[Window.GRID_SIZE * Window.GRID_SIZE][8];
@@ -18,8 +16,8 @@ public class Moves {
 	private static MoveHandler moveHandler;
 
 	public static void init(Board board, MoveHandler moveHandler) {
-		Moves.board = board;
-		Moves.moveHandler = moveHandler;
+		MovesTemp.board = board;
+		MovesTemp.moveHandler = moveHandler;
 		createDistanceArray();
 	}
 
@@ -39,29 +37,76 @@ public class Moves {
 	}
 
 	public static Map<Integer, List<Move>> generateLegalMoveMap() {
-		return generateLegalMoves().stream().collect(Collectors.groupingBy(m -> board.index(m.sfile, m.srank)));
+		Set<Move> movesRemDups = new HashSet<>(generateLegalMoves());
+		List<Move> moves = new ArrayList<>(movesRemDups);
+		return moves.stream().collect(Collectors.groupingBy(m -> board.index(m.sfile, m.srank)));
 	}
 
+	// public static List<Move> generateLegalMoves() {
+	// 	List<Move> pseudoLegalMoves = generateMoves();
+	// 	List<Move> legalMoves = new ArrayList<>();
+	// 	int turn = board.colorToMove;
+	//
+	// 	for (Move move : pseudoLegalMoves) {
+	// 		MoveState prevState = moveHandler.makeTemporaryMove(move);
+	// 		int indexOfKing = board.indexOfKing(turn);
+	// 		List<Move> responses = generateMoves();
+	// 		if (responses.stream().noneMatch(m -> board.index(m.efile, m.erank) == indexOfKing)) {
+	// 			legalMoves.add(move);
+	// 		}
+	// 		moveHandler.undoMove(prevState);
+	// 	}
+	//
+	// 	return legalMoves;
+	// }
+
 	public static List<Move> generateLegalMoves() {
-		List<Move> pseudoLegalMoves = generateMoves();
+		List<Move> pseudoLegalMoves = generateMoves(); // all moves ignoring check
 		List<Move> legalMoves = new ArrayList<>();
-		int movingColor = board.colorToMove;
 
 		for (Move move : pseudoLegalMoves) {
-			MoveState prevState = moveHandler.makeTemporaryMove(move);
-			int indexOfKing = board.indexOfKing(movingColor);
-			List<Move> responses = generateMoves();
-			if (responses.stream().noneMatch(m -> board.index(m.efile, m.erank) == indexOfKing)) {
+			if (!wouldLeaveKingInCheck(move)) {
 				legalMoves.add(move);
 			}
-			moveHandler.undoMove(prevState);
 		}
 
 		return legalMoves;
 	}
 
-	public static boolean isKingInCheck(int kindex) {
+	public static boolean wouldLeaveKingInCheck(Move move) {
+		int turn = Piece.isColor(board.get(move.sfile, move.srank), Piece.WHITE) ? Piece.WHITE : Piece.BLACK;
+
+		int kingSquare = board.indexOfKing(turn);
+		int startSquare = board.index(move.sfile, move.srank);
+		int endSquare = board.index(move.efile, move.erank);
+
+		// If the move is moving the king, the new king position is endSquare
+		if (board.get(startSquare) == (Piece.KING | turn)) {
+			kingSquare = endSquare;
+		}
+
+		// Check if the kingSquare is attacked after this move
+		return isSquareAttacked(kingSquare, Piece.inverse(turn));
+	}
+
+	public static boolean isSquareAttacked(int squareIndex, int attackerColor) {
+		for (int pieceType : board.pieceMap.keySet()) {
+			List<List<Integer>> squares = board.pieceMap.get(pieceType);
+			int color = Piece.indexFromColor(attackerColor);
+			List<Integer> pieceSquares = squares.get(color);
+
+			for (int square : pieceSquares) {
+				List<Integer> attackedSquares = generateAttacks(square, pieceType | attackerColor);
+				if (attackedSquares.contains(squareIndex)) return true;
+			}
+		}
+
+		return false;
+	}
+
+	public static boolean isKingInCheck() {
 		List<Move> opponentMoves = generateOpponentMoves();
+		int kindex = board.pieceMap.get(Piece.KING).get(Piece.indexFromColor(board.colorToMove)).get(0);
 		int kfile = kindex % 8;
 		int krank = kindex / 8;
 
@@ -75,12 +120,17 @@ public class Moves {
 	public static List<Move> generateMoves() {
 		List<Move> moves = new ArrayList<>();
 
-		for (int rank = 0; rank < 8; rank++) {
-			for (int file = 0; file < 8; file++) {
-				int piece = board.get(file, rank);
-				if (Piece.isColor(piece, board.colorToMove)) {
-					moves.addAll(generateMoves(file, rank, piece));
-				}
+		for (int pieceType : board.pieceMap.keySet()) {
+			List<List<Integer>> indiciesColors = board.pieceMap.get(pieceType);
+			int color = Piece.indexFromColor(board.colorToMove);
+			List<Integer> indicies = indiciesColors.get(color);
+			if (indicies.isEmpty()) continue;
+
+			int piece = pieceType | (color == 0 ? Piece.WHITE : Piece.BLACK);
+			for (int index : indicies) {
+				int file = index % board.width;
+				int rank = index / board.width;
+				moves.addAll(generateMoves(file, rank, piece));
 			}
 		}
 
@@ -90,12 +140,17 @@ public class Moves {
 	public static List<Move> generateOpponentMoves() {
 		List<Move> moves = new ArrayList<>();
 
-		for (int rank = 0; rank < 8; rank++) {
-			for (int file = 0; file < 8; file++) {
-				int piece = board.get(file, rank);
-				if (Piece.isOppositeColor(piece, board.colorToMove)) {
-					moves.addAll(generateMoves(file, rank, piece));
-				}
+		for (int pieceType : board.pieceMap.keySet()) {
+			List<List<Integer>> indiciesColors = board.pieceMap.get(pieceType);
+			int color = Piece.indexFromColor(Piece.inverse(board.colorToMove));
+			List<Integer> indicies = indiciesColors.get(color);
+			if (indicies.isEmpty()) continue;
+			int piece = pieceType | (color == 0 ? Piece.WHITE : Piece.BLACK);
+			for (int index : indicies) {
+				int file = index % board.width;
+				int rank = index / board.width;
+				moves.addAll(generateMoves(file, rank, piece));
+
 			}
 		}
 
@@ -107,6 +162,18 @@ public class Moves {
 		else if (Piece.isType(piece, Piece.KING)) return generateKingMoves(board.index(file, rank), piece);
 		else if (Piece.isType(piece, Piece.KNIGHT)) return generateKnightMoves(board.index(file, rank), piece);
 		else if (Piece.isType(piece, Piece.PAWN)) return generatePawnMoves(board.index(file, rank), piece);
+		else return new ArrayList<>();
+	}
+
+	public static List<Integer> generateAttacks(int square, int piece) {
+		if (Piece.isSlider(piece))
+			return generateSliderMoves(square, piece).stream().map(m -> board.index(m.efile, m.erank)).toList();
+		else if (Piece.isType(piece, Piece.KING))
+			return generateKingMoves(square, piece).stream().map(m -> board.index(m.efile, m.erank)).toList();
+		else if (Piece.isType(piece, Piece.KNIGHT))
+			return generateKnightMoves(square, piece).stream().map(m -> board.index(m.efile, m.erank)).toList();
+		else if (Piece.isType(piece, Piece.PAWN))
+			return generatePawnAttacks(square, piece).stream().map(m -> board.index(m.efile, m.erank)).toList();
 		else return new ArrayList<>();
 	}
 
@@ -247,4 +314,28 @@ public class Moves {
 
 		return moves;
 	}
+
+	public static List<Move> generatePawnAttacks(int startSquare, int piece) {
+		List<Move> moves = new ArrayList<>();
+		int file = startSquare % 8;
+		int rank = startSquare / 8;
+
+		int direction = Piece.isColor(piece, Piece.WHITE) ? 1 : -1;
+		int targetRank = rank + direction;
+
+		if (targetRank < 0 || targetRank >= Window.GRID_SIZE) return moves;
+
+		int diagLeft = file - 1;
+		int diagRight = file + 1;
+
+		if (diagLeft >= 0) {
+			moves.add(new Move(file, rank, diagLeft, targetRank)); // attacks left
+		}
+		if (diagRight < Window.GRID_SIZE) {
+			moves.add(new Move(file, rank, diagRight, targetRank)); // attacks right
+		}
+
+		return moves;
+	}
+
 }

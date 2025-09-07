@@ -1,6 +1,7 @@
 package org.ajonx;
 
 import org.ajonx.pieces.Piece;
+import org.ajonx.pieces.PieceTracker;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -12,7 +13,7 @@ public class Board {
 	public int height;
 	public int[] board;
 	public int colorToMove = Piece.WHITE;
-	public Map<Integer, List<List<Integer>>> pieceMap = new HashMap<>();
+	public Map<Integer, PieceTracker> pieceMap = new HashMap<>();
 
 	public int enPassantTarget = -1;
 	public boolean whiteKingMove = false;
@@ -29,6 +30,10 @@ public class Board {
 	}
 
 	public void loadFromFEN(String fen) {
+		for (int type = Piece.KING; type <= Piece.PAWN; type++) {
+			pieceMap.put(type, new PieceTracker());
+		}
+
 		String[] sections = fen.split(" ");
 
 		String[] ranks = sections[0].split("/");
@@ -43,16 +48,12 @@ public class Board {
 					int pieceType = Piece.getPieceFromChar(Character.toLowerCase(c));
 					set(file, height - 1 - rank, pieceColor | pieceType);
 
-					if (!pieceMap.containsKey(pieceType)) {
-						List<Integer> white = new ArrayList<>();
-						List<Integer> black = new ArrayList<>();
-						List<List<Integer>> indices = new ArrayList<>();
-						indices.add(white);
-						indices.add(black);
-
-						pieceMap.put(pieceType, indices);
+					if (pieceColor == Piece.WHITE) {
+						pieceMap.get(pieceType).whiteSquares.add(index(file, height - 1 - rank));
+					} else {
+						pieceMap.get(pieceType).blackSquares.add(index(file, height - 1 - rank));
 					}
-					pieceMap.get(pieceType).get(pieceColor == Piece.WHITE ? 0 : 1).add(index(file++, height - 1 - rank));
+					file++;
 				}
 			}
 		}

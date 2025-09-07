@@ -1,6 +1,6 @@
 package org.ajonx.games;
 
-import org.ajonx.Piece;
+import org.ajonx.pieces.Piece;
 import org.ajonx.SoundPlayer;
 import org.ajonx.games.cpu.CPU;
 import org.ajonx.moves.Move;

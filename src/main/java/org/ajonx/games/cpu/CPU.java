@@ -10,7 +10,7 @@ public abstract class CPU implements Runnable {
 	protected Thread thread;
 	protected GameManager gameManager;
 	protected boolean running = true;
-	protected int delayMs = 10;
+	protected int delayMs = 20;
 	protected int color;
 
 	public CPU(GameManager gameManager, int color) {

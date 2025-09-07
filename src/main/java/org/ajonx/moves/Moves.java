@@ -2,7 +2,11 @@ package org.ajonx.moves;
 
 import org.ajonx.Board;
 import org.ajonx.Window;
-import org.ajonx.Piece;
+import org.ajonx.pieces.Piece;
+import org.ajonx.pieces.behaviours.KingBehaviour;
+import org.ajonx.pieces.behaviours.KnightBehaviour;
+import org.ajonx.pieces.behaviours.PawnBehaviour;
+import org.ajonx.pieces.behaviours.SlidingBehaviour;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -10,8 +14,6 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 public class Moves {
-	public static int[] directionOffsets = new int[] { 8, -8, -1, 1, 7, -7, 9, -9 };
-	public static int[] knightOffsets = new int[] { 6, -6, 10, -10, 15, -15, 17, -17 };
 	public static int[][] numSquaresToEdge = new int[Window.GRID_SIZE * Window.GRID_SIZE][8];
 
 	private static Board board;
@@ -60,18 +62,6 @@ public class Moves {
 		return legalMoves;
 	}
 
-	public static boolean isKingInCheck(int kindex) {
-		List<Move> opponentMoves = generateOpponentMoves();
-		int kfile = kindex % 8;
-		int krank = kindex / 8;
-
-		for (Move move : opponentMoves) {
-			if (move.efile == kfile && move.erank == krank) return true;
-		}
-
-		return false;
-	}
-
 	public static List<Move> generateMoves() {
 		List<Move> moves = new ArrayList<>();
 
@@ -79,7 +69,7 @@ public class Moves {
 			for (int file = 0; file < 8; file++) {
 				int piece = board.get(file, rank);
 				if (Piece.isColor(piece, board.colorToMove)) {
-					moves.addAll(generateMoves(file, rank, piece));
+					moves.addAll(generateMovesAt(file, rank, piece));
 				}
 			}
 		}
@@ -94,7 +84,7 @@ public class Moves {
 			for (int file = 0; file < 8; file++) {
 				int piece = board.get(file, rank);
 				if (Piece.isOppositeColor(piece, board.colorToMove)) {
-					moves.addAll(generateMoves(file, rank, piece));
+					moves.addAll(generateMovesAt(file, rank, piece));
 				}
 			}
 		}
@@ -102,82 +92,22 @@ public class Moves {
 		return moves;
 	}
 
-	public static List<Move> generateMoves(int file, int rank, int piece) {
-		if (Piece.isSlider(piece)) return generateSliderMoves(board.index(file, rank), piece);
-		else if (Piece.isType(piece, Piece.KING)) return generateKingMoves(board.index(file, rank), piece);
-		else if (Piece.isType(piece, Piece.KNIGHT)) return generateKnightMoves(board.index(file, rank), piece);
-		else if (Piece.isType(piece, Piece.PAWN)) return generatePawnMoves(board.index(file, rank), piece);
+	public static List<Move> generateMovesAt(int file, int rank, int piece) {
+		if (Piece.isSlider(piece)) return SlidingBehaviour.getMovement(board, file, rank, piece, numSquaresToEdge);
+		else if (Piece.isType(piece, Piece.KING)) return KingBehaviour.getMovement(board, file, rank, piece);
+		else if (Piece.isType(piece, Piece.KNIGHT)) return KnightBehaviour.getMovement(board, file, rank, piece);
+		else if (Piece.isType(piece, Piece.PAWN)) return PawnBehaviour.getMovement(board, file, rank, piece);
 		else return new ArrayList<>();
 	}
 
-	public static List<Move> generateSliderMoves(int startSquare, int movingPiece) {
+	public static List<Move> generateAttacks() {
 		List<Move> moves = new ArrayList<>();
-		int startDirIndex = Piece.isType(movingPiece, Piece.BISHOP) ? 4 : 0;
-		int endDirIndex = Piece.isType(movingPiece, Piece.ROOK) ? 4 : 8;
 
-		for (int dirIndex = startDirIndex; dirIndex < endDirIndex; dirIndex++) {
-			for (int n = 0; n < numSquaresToEdge[startSquare][dirIndex]; n++) {
-				int targetSquare = startSquare + directionOffsets[dirIndex] * (n + 1);
-				int pieceOnTarget = board.get(targetSquare);
-
-				if (Piece.matchColor(pieceOnTarget, movingPiece)) break;
-				moves.add(new Move(startSquare, targetSquare));
-				if (Piece.matchOppositeColor(pieceOnTarget, movingPiece)) break;
-			}
-		}
-
-		return moves;
-	}
-
-	public static List<Move> generateKingMoves(int startSquare, int movingPiece) {
-		List<Move> moves = new ArrayList<>();
-		int file = startSquare % 8;
-
-		for (int dirIndex = 0; dirIndex < 8; dirIndex++) {
-			int targetSquare = startSquare + directionOffsets[dirIndex];
-			if (targetSquare < 0 || targetSquare >= 64) continue;
-			int targetFile = targetSquare % 8;
-			if (Math.abs(targetFile - file) > 1) continue;
-
-			int pieceOnTarget = board.get(targetSquare);
-
-			if (!Piece.matchColor(pieceOnTarget, movingPiece)) {
-				moves.add(new Move(startSquare, targetSquare));
-			}
-		}
-
-		if (Piece.isColor(movingPiece, Piece.WHITE)) {
-			int rank = 0;
-
-			if (!board.whiteKingMove && !board.whiteRKMove) {
-				if (board.get(5, rank) == Piece.INVALID &&
-					board.get(6, rank) == Piece.INVALID) {
-					moves.add(new Move(startSquare, file + 2 + rank * 8));
-				}
-			}
-
-			if (!board.whiteKingMove && !board.whiteRQMove) {
-				if (board.get(1, rank) == Piece.INVALID &&
-					board.get(2, rank) == Piece.INVALID &&
-					board.get(3, rank) == Piece.INVALID) {
-					moves.add(new Move(startSquare, file - 2 + rank * 8));
-				}
-			}
-		} else {
-			int rank = 7;
-
-			if (!board.blackKingMove && !board.blackRKMove) {
-				if (board.get(5, rank) == Piece.INVALID &&
-					board.get(6, rank) == Piece.INVALID) {
-					moves.add(new Move(startSquare, file + 2 + rank * 8));
-				}
-			}
-
-			if (!board.blackKingMove && !board.blackRQMove) {
-				if (board.get(1, rank) == Piece.INVALID &&
-					board.get(2, rank) == Piece.INVALID &&
-					board.get(3, rank) == Piece.INVALID) {
-					moves.add(new Move(startSquare, file - 2 + rank * 8));
+		for (int rank = 0; rank < 8; rank++) {
+			for (int file = 0; file < 8; file++) {
+				int piece = board.get(file, rank);
+				if (Piece.isOppositeColor(piece, board.colorToMove)) {
+					moves.addAll(generateAttacksAt(file, rank, piece));
 				}
 			}
 		}
@@ -185,66 +115,22 @@ public class Moves {
 		return moves;
 	}
 
-	public static List<Move> generateKnightMoves(int startSquare, int movingPiece) {
-		List<Move> moves = new ArrayList<>();
-		int file = startSquare % 8;
-		int rank = startSquare / 8;
-
-		for (int dirIndex = 0; dirIndex < 8; dirIndex++) {
-			int targetSquare = startSquare + knightOffsets[dirIndex];
-			if (targetSquare < 0 || targetSquare >= 64) continue;
-			int targetFile = targetSquare % 8;
-			int targetRank = targetSquare / 8;
-			int df = Math.abs(targetFile - file);
-			int dr = Math.abs(targetRank - rank);
-			if (!((df == 2 && dr == 1) || (df == 1 && dr == 2))) continue;
-
-			int pieceOnTarget = board.get(targetSquare);
-
-			if (!Piece.matchColor(pieceOnTarget, movingPiece)) {
-				moves.add(new Move(startSquare, targetSquare));
-			}
-		}
-
-		return moves;
+	public static List<Move> generateAttacksAt(int file, int rank, int piece) {
+		if (Piece.isSlider(piece)) return SlidingBehaviour.getAttacks(board, file, rank, piece, numSquaresToEdge);
+		else if (Piece.isType(piece, Piece.KING)) return KingBehaviour.getAttacks(board, file, rank, piece);
+		else if (Piece.isType(piece, Piece.KNIGHT)) return KnightBehaviour.getAttacks(board, file, rank, piece);
+		else if (Piece.isType(piece, Piece.PAWN)) return PawnBehaviour.getAttacks(board, file, rank, piece);
+		else return new ArrayList<>();
 	}
 
-	public static List<Move> generatePawnMoves(int startSquare, int piece) {
-		List<Move> moves = new ArrayList<>();
-		int file = startSquare % 8;
-		int rank = startSquare / 8;
+	public static boolean isKingInCheck(int kingIndex) {
+		List<Move> attackedSquares = generateAttacks();
+		List<Integer> squaresAttacked = attackedSquares.stream().map(m -> board.index(m.efile, m.erank)).toList();
 
-		int baseRank = Piece.isColor(piece, Piece.WHITE) ? 1 : 6;
-		int direction = Piece.isColor(piece, Piece.WHITE) ? 1 : -1;
-		int nextRank = rank + direction;
-
-		if (nextRank >= Window.GRID_SIZE || nextRank < 0) return moves;
-
-		if (board.get(file, nextRank) == Piece.INVALID) {
-			moves.add(new Move(file, rank, file, nextRank));
-			if (rank == baseRank && board.get(file, rank + direction * 2) == Piece.INVALID) {
-				moves.add(new Move(file, rank, file, rank + direction * 2));
-			}
+		for (int attackedSquare : squaresAttacked) {
+			if (attackedSquare == kingIndex) return true;
 		}
 
-		int diag1 = file - 1;
-		int diag2 = file + 1;
-		int targetRank = rank + direction;
-
-		if (diag1 >= 0 && Piece.matchOppositeColor(board.get(diag1, targetRank), piece)) {
-			moves.add(new Move(file, rank, diag1, targetRank));
-		}
-		if (diag2 < Window.GRID_SIZE && Piece.matchOppositeColor(board.get(diag2, targetRank), piece)) {
-			moves.add(new Move(file, rank, diag2, targetRank));
-		}
-
-		if (diag1 >= 0 && board.index(diag1, targetRank) == board.enPassantTarget) {
-			moves.add(new Move(file, rank, diag1, targetRank));
-		}
-		if (diag2 >= 0 && board.index(diag2, targetRank) == board.enPassantTarget) {
-			moves.add(new Move(file, rank, diag2, targetRank));
-		}
-
-		return moves;
+		return false;
 	}
 }

@@ -1,4 +1,4 @@
-package org.ajonx;
+package org.ajonx.pieces;
 
 public class Piece {
 	public static final int WHITE = 0b01000;

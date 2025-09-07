@@ -1,13 +1,12 @@
 package org.ajonx.games;
 
-import org.ajonx.Piece;
+import org.ajonx.pieces.Piece;
 import org.ajonx.SoundPlayer;
 import org.ajonx.games.cpu.CPU;
 import org.ajonx.moves.Move;
 import org.ajonx.moves.Moves;
 
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public class GameManager {
 	public CPU whiteCPU;
@@ -41,7 +40,7 @@ public class GameManager {
 	public void endGame(GameState state) {
 		isGameOver = true;
 		if (headless) return;
-			
+
 		String opponentString = instances.board.colorToMove == Piece.WHITE ? "Black" : "White";
 
 		if (state == GameState.CHECKMATE) {
@@ -60,10 +59,10 @@ public class GameManager {
 		boolean isTake = instances.board.get(move.efile, move.erank) != Piece.INVALID;
 		boolean isCastle = instances.moveHandler.isCastle(move.sfile, move.efile, piece);
 
-		if (!headless) {
-			if (instances.board.colorToMove == Piece.WHITE) System.out.print(move + " ");
-			else System.out.println(move);
-		}
+		// if (!headless) {
+		// 	if (instances.board.colorToMove == Piece.WHITE) System.out.print(move + " ");
+		// 	else System.out.println(move);
+		// }
 
 		instances.moveHandler.makeMove(move.sfile, move.srank, move.efile, move.erank, piece);
 
@@ -104,7 +103,15 @@ public class GameManager {
 	}
 
 	public Map<Integer, List<Move>> getLegalMoves() {
-		return Moves.generateLegalMoveMap();
+		Map<Integer, List<Move>> moves = new HashMap<>();
+		Map<Integer, List<Move>> moveMap = Moves.generateLegalMoveMap();
+
+		for (int square : moveMap.keySet()) {
+			Set<Move> moveRemDup = new HashSet<>(moveMap.get(square));
+			moves.put(square, new ArrayList<>(moveRemDup));
+		}
+
+		return moves;
 	}
 
 	public void headless() {

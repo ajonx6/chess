@@ -1,4 +1,4 @@
-package org.ajonx;
+package org.ajonx.pieces;
 
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;

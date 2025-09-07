@@ -1,5 +1,7 @@
 package org.ajonx;
 
+import org.ajonx.pieces.Piece;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -24,9 +26,6 @@ public class Board {
 		this.width = width;
 		this.height = height;
 		this.board = new int[width * height];
-
-		loadFromFEN("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
-		// loadFromFEN("4k3/8/2r5/4R3/B7/8/8/4K3 b KQkq - 0 1");
 	}
 
 	public void loadFromFEN(String fen) {
@@ -127,13 +126,20 @@ public class Board {
 	public List<Pair<Integer, Integer>> getAllPieces() {
 		List<Pair<Integer, Integer>> pieces = new ArrayList<>();
 
-		for (int pieceType : pieceMap.keySet()) {
-			List<List<Integer>> indiciesColors = pieceMap.get(pieceType);
-			for (int color = 0; color < 2; color++) {
-				List<Integer> indicies = indiciesColors.get(color);
-				for (int index : indicies) {
-					pieces.add(new Pair<>(pieceType | Piece.colorFromIndex(color), index));
-				}
+		// for (int pieceType : pieceMap.keySet()) {
+		// 	List<List<Integer>> indiciesColors = pieceMap.get(pieceType);
+		// 	for (int color = 0; color < 2; color++) {
+		// 		List<Integer> indicies = indiciesColors.get(color);
+		// 		for (int index : indicies) {
+		// 			pieces.add(new Pair<>(pieceType | Piece.colorFromIndex(color), index));
+		// 		}
+		// 	}
+		// }
+
+		for (int file = 0; file < width; file++) {
+			for (int rank = 0; rank < height; rank++) {
+				int piece = get(file, rank);
+				if (piece != Piece.INVALID) pieces.add(new Pair<>(piece, index(file, rank)));
 			}
 		}
 

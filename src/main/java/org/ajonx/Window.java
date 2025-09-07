@@ -4,6 +4,8 @@ import org.ajonx.games.GameManager;
 import org.ajonx.moves.Move;
 import org.ajonx.moves.MoveHandler;
 import org.ajonx.moves.Moves;
+import org.ajonx.pieces.Piece;
+import org.ajonx.pieces.PieceImages;
 
 import javax.swing.*;
 import java.awt.*;
@@ -38,6 +40,7 @@ public class Window {
 		PieceImages.init("pieces.png", 6, 2, PieceImages.getDefaultPieceList());
 		uiState = new UIState();
 		board = new Board(GRID_SIZE, GRID_SIZE);
+		board.loadFromFEN("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
 		moveHandler = new MoveHandler(board);
 		Moves.init(board, moveHandler);
 		movesPerSquare = Moves.generateLegalMoveMap();

@@ -21,9 +21,9 @@ public class Move implements Comparable<Move> {
 	}
 
 	public String toString() {
-		String start = "" + (char) ('A' + sfile) + (srank + 1);
-		String end = "" + (char) ('A' + efile) + (erank + 1);
-		return start + "->" + end;
+		String start = "" + (char) ('a' + sfile) + (srank + 1);
+		String end = "" + (char) ('a' + efile) + (erank + 1);
+		return start + "" + end;
 	}
 
 	@Override

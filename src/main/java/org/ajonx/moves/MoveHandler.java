@@ -2,9 +2,14 @@ package org.ajonx.moves;
 
 import org.ajonx.Board;
 import org.ajonx.Window;
-import org.ajonx.Piece;
+import org.ajonx.pieces.Piece;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public class MoveHandler {
+	public List<Move> history = new ArrayList<>();
+	
 	private Board board;
 
 	public MoveHandler(Board board) {
@@ -19,6 +24,8 @@ public class MoveHandler {
 		boolean bk = board.blackKingMove, brq = board.blackRQMove, brk = board.blackRKMove;
 		int colorToMoveBefore = board.colorToMove;
 
+		history.add(move);
+		
 		if (isCastle(move.sfile, move.efile, startPiece)) {
 			boolean left = move.efile < move.sfile;
 			int rookStartFile = left ? 0 : Window.GRID_SIZE - 1;
@@ -54,6 +61,8 @@ public class MoveHandler {
 			board.set(state.rookStartFile, state.rookStartRank, state.rookStartPieceBefore);
 			board.set(state.rookEndFile, state.rookEndRank, state.rookEndPieceBefore);
 		}
+
+		history.remove(history.size() - 1);
 	}
 
 

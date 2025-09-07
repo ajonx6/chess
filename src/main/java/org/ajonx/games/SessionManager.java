@@ -2,7 +2,7 @@ package org.ajonx.games;
 
 import org.ajonx.Board;
 import org.ajonx.Window;
-import org.ajonx.Piece;
+import org.ajonx.pieces.Piece;
 import org.ajonx.games.cpu.CPU;
 import org.ajonx.moves.Move;
 import org.ajonx.moves.MoveHandler;

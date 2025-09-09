@@ -57,8 +57,7 @@ public abstract class CPU implements Runnable {
 
 			Move chosenMove = pickMove(movesPerSquare);
 			if (running && chosenMove != null) {
-				int piece = gameManager.instances.board.get(chosenMove.sfile, chosenMove.srank);
-				gameManager.runTurn(chosenMove, piece);
+				gameManager.runTurn(chosenMove);
 			}
 		}
 	}

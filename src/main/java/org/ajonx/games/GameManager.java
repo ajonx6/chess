@@ -1,25 +1,49 @@
 package org.ajonx.games;
 
+import org.ajonx.Board;
+import org.ajonx.Window;
+import org.ajonx.moves.MoveHandler;
 import org.ajonx.pieces.Piece;
 import org.ajonx.SoundPlayer;
 import org.ajonx.games.cpu.CPU;
 import org.ajonx.moves.Move;
-import org.ajonx.moves.Moves;
+import org.ajonx.moves.MoveGenerator;
 
 import java.util.*;
 
 public class GameManager {
+	public static final int GRID_SIZE = 8;
+	public static final int CELL_SIZE = 75;
+
+	public Window window;
+	public Board board;
+	public MoveGenerator moveGenerator;
+	public MoveHandler moveHandler;
 	public CPU whiteCPU;
 	public CPU blackCPU;
-	public GameInstances instances;
 	public boolean isGameOver;
 
 	private boolean headless = false;
 
-	public GameManager() {}
+	public GameManager(Window window, String startFen) {
+		this.window = window;
+		this.board = new Board(GRID_SIZE, GRID_SIZE);
+		this.moveGenerator = new MoveGenerator(board);
+		this.moveHandler = new MoveHandler(board, moveGenerator);
 
-	public void setInstances(GameInstances instances) {
-		this.instances = instances;
+		board.loadGame(startFen);
+	}
+
+	public GameManager(String startFen) {
+		this(null, startFen);
+	}
+
+	public GameManager(Window window) {
+		this(window, "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+	}
+
+	public GameManager() {
+		this(null, "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
 	}
 
 	public void setWhiteCPU(CPU cpu) {
@@ -35,13 +59,14 @@ public class GameManager {
 			if (whiteCPU != null) whiteCPU.start();
 			if (blackCPU != null) blackCPU.start();
 		}
+		moveGenerator.precomputeData();
 	}
 
 	public void endGame(GameState state) {
 		isGameOver = true;
 		if (headless) return;
 
-		String opponentString = instances.board.colorToMove == Piece.WHITE ? "Black" : "White";
+		String opponentString = board.colorToMove == Piece.WHITE ? "Black" : "White";
 
 		if (state == GameState.CHECKMATE) {
 			System.out.println(opponentString + " wins!");
@@ -55,24 +80,26 @@ public class GameManager {
 		if (blackCPU != null) blackCPU.stop();
 	}
 
-	public void runTurn(Move move, int piece) {
-		boolean isTake = instances.board.get(move.efile, move.erank) != Piece.INVALID;
-		boolean isCastle = instances.moveHandler.isCastle(move.sfile, move.efile, piece);
-
-		// if (!headless) {
-		// 	if (instances.board.colorToMove == Piece.WHITE) System.out.print(move + " ");
-		// 	else System.out.println(move);
-		// }
-
-		instances.moveHandler.makeMove(move.sfile, move.srank, move.efile, move.erank, piece);
+	public void runTurn(Move move) {
+		int startPiece = board.get(move.startFile, move.startRank);
+		int endPiece = board.get(move.endFile, move.endRank);
+		boolean isTake = endPiece != Piece.INVALID;
+		boolean isCastle = moveHandler.isCastle(move, startPiece);
 
 		if (!headless) {
-			instances.window.resetHeldPiece();
-			instances.window.chessPanel.repaint();
+			if (board.colorToMove == Piece.WHITE) System.out.print(move + " ");
+			else System.out.println(move);
 		}
 
-		int kingIndex = instances.board.indexOfKing(instances.board.colorToMove);
-		boolean inCheck = Moves.isKingInCheck(kingIndex);
+		moveHandler.makeMove(move);
+
+		if (!headless) {
+			window.resetHeldPiece();
+			window.repaint();
+		}
+
+		moveGenerator.precomputeData();
+		boolean inCheck = moveGenerator.isKingInCheck(board.colorToMove);
 
 		GameState state = evaluateGameState();
 		if (state != GameState.ONGOING) {
@@ -87,24 +114,22 @@ public class GameManager {
 	}
 
 	public GameState evaluateGameState() {
-		Map<Integer, List<Move>> legalMoves = Moves.generateLegalMoveMap();
-
-		int kingIndex = instances.board.indexOfKing(instances.board.colorToMove);
-		boolean inCheck = Moves.isKingInCheck(kingIndex);
+		Map<Integer, List<Move>> legalMoves = moveGenerator.generateLegalMoveMap();
+		boolean inCheck = moveGenerator.isKingInCheck(board.colorToMove);
 
 		if (legalMoves.isEmpty()) {
 			if (inCheck) return GameState.CHECKMATE;
 			else return GameState.STALEMATE;
 		}
 
-		if (instances.board.isImmaterial()) return GameState.DRAW_IMMATERIAL;
+		if (board.isImmaterial()) return GameState.DRAW_IMMATERIAL;
 
 		return GameState.ONGOING;
 	}
 
 	public Map<Integer, List<Move>> getLegalMoves() {
 		Map<Integer, List<Move>> moves = new HashMap<>();
-		Map<Integer, List<Move>> moveMap = Moves.generateLegalMoveMap();
+		Map<Integer, List<Move>> moveMap = moveGenerator.generateLegalMoveMap();
 
 		for (int square : moveMap.keySet()) {
 			Set<Move> moveRemDup = new HashSet<>(moveMap.get(square));

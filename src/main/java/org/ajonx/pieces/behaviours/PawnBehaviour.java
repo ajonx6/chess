@@ -2,6 +2,7 @@ package org.ajonx.pieces.behaviours;
 
 import org.ajonx.Board;
 import org.ajonx.Window;
+import org.ajonx.games.GameManager;
 import org.ajonx.moves.Move;
 import org.ajonx.pieces.Piece;
 
@@ -16,7 +17,7 @@ public class PawnBehaviour implements PieceBehaviour {
 		int direction = Piece.isColor(movingPiece, Piece.WHITE) ? 1 : -1;
 		int nextRank = rank + direction;
 
-		if (nextRank >= Window.GRID_SIZE || nextRank < 0) return moves;
+		if (nextRank >= GameManager.GRID_SIZE || nextRank < 0) return moves;
 
 		// Forward moves
 		if (board.get(file, nextRank) == Piece.INVALID) {
@@ -39,7 +40,7 @@ public class PawnBehaviour implements PieceBehaviour {
 			}
 		}
 
-		if (diag2 < Window.GRID_SIZE) { // ✅ check upper bound
+		if (diag2 < GameManager.GRID_SIZE) { // ✅ check upper bound
 			if (Piece.matchOppositeColor(board.get(diag2, nextRank), movingPiece)) {
 				moves.add(new Move(file, rank, diag2, nextRank));
 			}
@@ -58,7 +59,7 @@ public class PawnBehaviour implements PieceBehaviour {
 		int direction = Piece.isColor(movingPiece, Piece.WHITE) ? 1 : -1;
 		int targetRank = rank + direction;
 
-		if (targetRank < 0 || targetRank >= Window.GRID_SIZE) return moves;
+		if (targetRank < 0 || targetRank >= GameManager.GRID_SIZE) return moves;
 
 		int diagLeft = file - 1;
 		int diagRight = file + 1;
@@ -66,7 +67,7 @@ public class PawnBehaviour implements PieceBehaviour {
 		if (diagLeft >= 0) {
 			moves.add(new Move(file, rank, diagLeft, targetRank)); // attacks left
 		}
-		if (diagRight < Window.GRID_SIZE) {
+		if (diagRight < GameManager.GRID_SIZE) {
 			moves.add(new Move(file, rank, diagRight, targetRank)); // attacks right
 		}
 

@@ -3,7 +3,7 @@ package org.ajonx;
 import org.ajonx.games.GameManager;
 import org.ajonx.moves.Move;
 import org.ajonx.moves.MoveHandler;
-import org.ajonx.moves.Moves;
+import org.ajonx.moves.MoveGenerator;
 import org.ajonx.pieces.Piece;
 import org.ajonx.pieces.PieceImages;
 
@@ -19,31 +19,21 @@ import java.util.List;
 import java.util.Map;
 
 public class Window {
-	public static final int GRID_SIZE = 8;
-	public static final int CELL_SIZE = 75;
-	public static final int WIDTH = CELL_SIZE * GRID_SIZE;
-	public static final int HEIGHT = CELL_SIZE * GRID_SIZE;
+	public static final int WIDTH = GameManager.CELL_SIZE * GameManager.GRID_SIZE;
+	public static final int HEIGHT = GameManager.CELL_SIZE * GameManager.GRID_SIZE;
 
 	private JFrame frame;
-	public JPanel chessPanel;
-	private Board board;
-	private MoveHandler moveHandler;
+	private JPanel chessPanel;
 	private UIState uiState;
 	private GameManager gameManager;
 
 	private int mouseX = -1, mouseY = -1;
 	private boolean mouseWasPressed = false;
-	private Map<Integer, List<Move>> movesPerSquare;
 	private List<Move> movesForPiece = new ArrayList<>();
 
 	public Window() {
 		PieceImages.init("pieces.png", 6, 2, PieceImages.getDefaultPieceList());
 		uiState = new UIState();
-		board = new Board(GRID_SIZE, GRID_SIZE);
-		board.loadFromFEN("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
-		moveHandler = new MoveHandler(board);
-		Moves.init(board, moveHandler);
-		movesPerSquare = Moves.generateLegalMoveMap();
 
 		frame = new JFrame("Chess");
 		frame.setUndecorated(true);
@@ -51,7 +41,6 @@ public class Window {
 		frame.setLocationRelativeTo(null);
 		frame.setResizable(false);
 		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-
 		createChessPanel();
 
 		frame.setVisible(true);
@@ -129,28 +118,28 @@ public class Window {
 	public void drawBoard(Graphics g, Graphics2D g2) {
 		g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
-		for (int rank = 0; rank < GRID_SIZE; rank++) {
-			for (int file = 0; file < GRID_SIZE; file++) {
-				int uiY = (GRID_SIZE - 1 - rank) * CELL_SIZE;
-				int uiX = file * CELL_SIZE;
+		for (int rank = 0; rank < GameManager.GRID_SIZE; rank++) {
+			for (int file = 0; file < GameManager.GRID_SIZE; file++) {
+				int uiY = (GameManager.GRID_SIZE - 1 - rank) * GameManager.CELL_SIZE;
+				int uiX = file * GameManager.CELL_SIZE;
 
 				Color color = getSquareColor(file, rank);
 				g.setColor(color);
-				g.fillRect(uiX, uiY, Window.CELL_SIZE, Window.CELL_SIZE);
+				g.fillRect(uiX, uiY, GameManager.CELL_SIZE, GameManager.CELL_SIZE);
 
-				int piece = board.get(board.index(file, rank));
+				int piece = gameManager.board.get(gameManager.board.index(file, rank));
 				if (piece != Piece.INVALID && !(file == uiState.startFile && rank == uiState.startRank && uiState.heldPiece != Piece.INVALID)) {
 					BufferedImage pieceImage = PieceImages.images.get(piece);
-					g.drawImage(pieceImage, uiX, uiY, CELL_SIZE, CELL_SIZE, null);
+					g.drawImage(pieceImage, uiX, uiY, GameManager.CELL_SIZE, GameManager.CELL_SIZE, null);
 				}
 			}
 		}
 
 		if (uiState.heldPiece != Piece.INVALID) {
 			BufferedImage pieceImage = PieceImages.images.get(uiState.heldPiece);
-			int imgX = mouseX - CELL_SIZE / 2;
-			int imgY = mouseY - CELL_SIZE / 2;
-			g.drawImage(pieceImage, imgX, imgY, CELL_SIZE, CELL_SIZE, null);
+			int imgX = mouseX - GameManager.CELL_SIZE / 2;
+			int imgY = mouseY - GameManager.CELL_SIZE / 2;
+			g.drawImage(pieceImage, imgX, imgY, GameManager.CELL_SIZE, GameManager.CELL_SIZE, null);
 		}
 
 		g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_OFF);
@@ -160,7 +149,7 @@ public class Window {
 		boolean isLight = (file + rank) % 2 == 1;
 
 		for (Move move : movesForPiece) {
-			if (file == move.efile && rank == move.erank) return Colors.getColor(Colors.MOVE_COLORS, isLight);
+			if (file == move.endFile && rank == move.endRank) return Colors.getColor(Colors.MOVE_COLORS, isLight);
 		}
 
 		if (file == uiState.startFile && rank == uiState.startRank)
@@ -174,15 +163,15 @@ public class Window {
 	private void handleMousePressed(MouseEvent e) {
 		if (uiState.heldPiece != Piece.INVALID) return;
 
-		int file = e.getX() / CELL_SIZE;
-		int rankUI = e.getY() / CELL_SIZE;
-		int rank = GRID_SIZE - 1 - rankUI;
+		int file = e.getX() / GameManager.CELL_SIZE;
+		int rankUI = e.getY() / GameManager.CELL_SIZE;
+		int rank = GameManager.GRID_SIZE - 1 - rankUI;
 
-		int pieceToHold = board.get(board.index(file, rank));
-		if (pieceToHold == Piece.INVALID || Piece.isOppositeColor(pieceToHold, board.colorToMove)) return;
+		int pieceToHold = gameManager.board.get(gameManager.board.index(file, rank));
+		if (pieceToHold == Piece.INVALID || Piece.isOppositeColor(pieceToHold, gameManager.board.colorToMove)) return;
 
+		List<Move> moves = gameManager.getLegalMoves().get(gameManager.board.index(file, rank));
 		resetHeldPiece();
-		List<Move> moves = movesPerSquare.get(board.index(file, rank));
 		if (moves != null) movesForPiece.addAll(moves);
 
 		uiState.heldPiece = pieceToHold;
@@ -200,9 +189,9 @@ public class Window {
 			return;
 		}
 
-		int file = e.getX() / CELL_SIZE;
-		int rankUI = e.getY() / CELL_SIZE;
-		int rank = GRID_SIZE - 1 - rankUI;
+		int file = e.getX() / GameManager.CELL_SIZE;
+		int rankUI = e.getY() / GameManager.CELL_SIZE;
+		int rank = GameManager.GRID_SIZE - 1 - rankUI;
 
 		if (!isMoveAllowed(file, rank)) {
 			resetHeldPiece();
@@ -211,7 +200,7 @@ public class Window {
 		}
 
 		Move move = new Move(uiState.startFile, uiState.startRank, file, rank);
-		gameManager.runTurn(move, uiState.heldPiece);
+		gameManager.runTurn(move);
 		resetHeldPiece();
 	}
 
@@ -220,26 +209,21 @@ public class Window {
 	}
 
 	public boolean isMoveAllowed(int file, int rank) {
-		return movesForPiece.stream().anyMatch(move -> move.efile == file && move.erank == rank);
+		return movesForPiece.stream().anyMatch(move -> move.endFile == file && move.endRank == rank);
 	}
 
 	public void resetHeldPiece() {
 		uiState.resetHeldPiece();
-		movesPerSquare = Moves.generateLegalMoveMap();
 		movesForPiece.clear();
 		mouseX = -1;
 		mouseY = -1;
 	}
 
-	public Board getBoard() {
-		return board;
-	}
-
-	public MoveHandler getMoveHandler() {
-		return moveHandler;
-	}
-
 	public UIState getUiState() {
 		return uiState;
+	}
+
+	public void repaint() {
+		chessPanel.repaint();
 	}
 }

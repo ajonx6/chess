@@ -1,15 +1,10 @@
 package org.ajonx.games;
 
-import org.ajonx.Board;
-import org.ajonx.Window;
-import org.ajonx.games.cpu.CPU;
 import org.ajonx.moves.Move;
-import org.ajonx.moves.MoveHandler;
-import org.ajonx.moves.MoveState;
-import org.ajonx.moves.Moves;
 import org.ajonx.pieces.Piece;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 public class MoveTester {
 	private int depth;
@@ -21,16 +16,10 @@ public class MoveTester {
 	}
 
 	public GameManager setupGame() {
-		GameManager game = new GameManager();
-
-		Board board = new Board(Window.GRID_SIZE, Window.GRID_SIZE);
-		board.loadFromFEN(startFen);
-		MoveHandler moveHandler = new MoveHandler(board);
-		Moves.init(board, moveHandler);
+		GameManager game = new GameManager(startFen);
+		game.moveGenerator.precomputeData();
 
 		game.headless();
-		game.setInstances(new GameInstances(null, board, moveHandler));
-
 		game.setWhiteCPU(null);
 		game.setBlackCPU(null);
 
@@ -38,18 +27,23 @@ public class MoveTester {
 	}
 
 	public void run() {
-		// GameManager gameManager = setupGame();
-
-		// int piece1 = gameManager.instances.board.get(7, 1);
-		// gameManager.instances.moveHandler.makeMove(7, 1, 7, 3, piece1);
-		// int piece2 = gameManager.instances.board.get(0, 6);
-		// gameManager.instances.moveHandler.makeMove(0, 6, 0, 4, piece2);
-		// List<List<Move>> histories = getHistories(4, gameManager);
-		// System.out.println("Number of moves " + histories.size());
-		// printHistoryGroupBy(histories, 1);
-
+		GameManager gameManager = setupGame();
+		//		gameManager.moveGenerator.precomputeData();
+		//		System.out.println(gameManager.moveGenerator.attackedSquares);
+		//		System.out.println(gameManager.moveGenerator.pinnedPieces);
+		//		System.out.println(gameManager.moveGenerator.checkers);
+		//		gameManager.moveHandler.makeMove(new Move("d2d3"));
+		//		gameManager.moveHandler.makeMove(new Move("c7c6"));
+		//		gameManager.moveHandler.makeMove(new Move("e1d2"));
+		//		gameManager.moveHandler.makeMove(new Move("d8a5"));
+		//		List<List<Move>> histories = getHistories(1, gameManager);
+		//		printHistoryGroupBy(histories, 1);
+		//		System.out.println(histories.size());
+		//
+		//
+		//
 		for (int i = 1; i <= depth; i++) {
-			GameManager gameManager = setupGame();
+			gameManager = setupGame();
 			long numMoves = run(i, gameManager);
 			System.out.println("Depth " + i + " = " + numMoves);
 		}
@@ -70,14 +64,18 @@ public class MoveTester {
 		}
 
 		for (String key : count.keySet()) {
-			System.out.println(key + "= " + count.get(key).size());
+			List<Move> finalMoves = new ArrayList<>();
+			for (List<Move> history : count.get(key)) {
+				finalMoves.add(history.get(history.size() - 1));
+			}
+			System.out.println(key + "= " + count.get(key).size() + "   (" + finalMoves + ")");
 		}
 	}
 
 	public List<List<Move>> getHistories(int depth, GameManager gameManager) {
 		if (depth == 0) {
 			List<List<Move>> history = new ArrayList<>();
-			history.add(new ArrayList<>(gameManager.instances.moveHandler.history));
+			history.add(new ArrayList<>(gameManager.moveHandler.history));
 			return history;
 		}
 
@@ -86,9 +84,11 @@ public class MoveTester {
 		List<List<Move>> history = new ArrayList<>();
 
 		for (Move move : moves) {
-			MoveState moveState = gameManager.instances.moveHandler.makeTemporaryMove(move);
+			gameManager.moveHandler.makeMove(move);
+			gameManager.moveGenerator.precomputeData();
 			history.addAll(getHistories(depth - 1, gameManager));
-			gameManager.instances.moveHandler.undoMove(moveState);
+			gameManager.moveHandler.undoMove();
+			gameManager.moveGenerator.precomputeData();
 		}
 
 		return history;
@@ -99,14 +99,17 @@ public class MoveTester {
 			return 1L;
 		}
 
+		gameManager.moveGenerator.precomputeData();
 		Map<Integer, List<Move>> moveMap = gameManager.getLegalMoves();
 		List<Move> moves = moveMap.values().stream().flatMap(List::stream).toList();
-		int numPositions = 0;
+		long numPositions = 0;
 
 		for (Move move : moves) {
-			MoveState moveState = gameManager.instances.moveHandler.makeTemporaryMove(move);
+			gameManager.moveHandler.makeMove(move);
+			gameManager.moveGenerator.precomputeData();
 			numPositions += run(depth - 1, gameManager);
-			gameManager.instances.moveHandler.undoMove(moveState);
+			gameManager.moveHandler.undoMove();
+			gameManager.moveGenerator.precomputeData();
 		}
 
 		return numPositions;

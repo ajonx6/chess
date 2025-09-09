@@ -3,27 +3,40 @@ package org.ajonx.moves;
 import java.util.Objects;
 
 public class Move implements Comparable<Move> {
-	public int sfile, srank;
-	public int efile, erank;
+	public int startFile, startRank;
+	public int endFile, endRank;
+	public int promotionPiece;
 
-	public Move(int sfile, int srank, int efile, int erank) {
-		this.sfile = sfile;
-		this.srank = srank;
-		this.efile = efile;
-		this.erank = erank;
+	public Move(int startFile, int startRank, int endFile, int endRank) {
+		this.startFile = startFile;
+		this.startRank = startRank;
+		this.endFile = endFile;
+		this.endRank = endRank;
 	}
 
-	public Move(int sindex, int eindex) {
-		this.sfile = sindex % 8;
-		this.srank = sindex / 8;
-		this.efile = eindex % 8;
-		this.erank = eindex / 8;
+	public Move(int startIndex, int endIndex) {
+		this.startFile = startIndex % 8;
+		this.startRank = startIndex / 8;
+		this.endFile = endIndex % 8;
+		this.endRank = endIndex / 8;
+	}
+
+	public Move(String square) {
+		this.startFile = Character.toLowerCase(square.charAt(0)) - 'a';
+		this.startRank = Character.toLowerCase(square.charAt(1)) - '1';
+		this.endFile = Character.toLowerCase(square.charAt(2)) - 'a';
+		this.endRank = Character.toLowerCase(square.charAt(3)) - '1';
+	}
+
+	public Move(Move move, int promotionPiece) {
+		this(move.startFile, move.startRank, move.endRank, move.endRank);
+		this.promotionPiece = promotionPiece;
 	}
 
 	public String toString() {
-		String start = "" + (char) ('a' + sfile) + (srank + 1);
-		String end = "" + (char) ('a' + efile) + (erank + 1);
-		return start + "" + end;
+		String start = "" + (char) ('a' + startFile) + (startRank + 1);
+		String end = "" + (char) ('a' + endFile) + (endRank + 1);
+		return start + end;
 	}
 
 	@Override
@@ -31,20 +44,20 @@ public class Move implements Comparable<Move> {
 		if (this == o) return true;
 		if (o == null || getClass() != o.getClass()) return false;
 		Move move = (Move) o;
-		return sfile == move.sfile && srank == move.srank && efile == move.efile && erank == move.erank;
+		return startFile == move.startFile && startRank == move.startRank && endFile == move.endFile && endRank == move.endRank;
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(sfile, srank, efile, erank);
+		return Objects.hash(startFile, startRank, endFile, endRank);
 	}
 
 	@Override
 	public int compareTo(Move o) {
-		if (sfile != o.sfile) return Integer.compare(sfile, o.sfile);
-		if (srank != o.srank) return Integer.compare(srank, o.srank);
-		if (efile != o.efile) return Integer.compare(efile, o.efile);
-		if (erank != o.erank) return Integer.compare(erank, o.erank);
+		if (startFile != o.startFile) return Integer.compare(startFile, o.startFile);
+		if (startRank != o.startRank) return Integer.compare(startRank, o.startRank);
+		if (endFile != o.endFile) return Integer.compare(endFile, o.endFile);
+		if (endRank != o.endRank) return Integer.compare(endRank, o.endRank);
 		return 0;
 	}
 }

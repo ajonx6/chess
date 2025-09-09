@@ -25,7 +25,7 @@ public class RandomCPU extends CPU {
 
 	@Override
 	public boolean isMyTurn() {
-		return color == gameManager.instances.board.colorToMove;
+		return color == gameManager.board.colorToMove;
 	}
 
 	@Override

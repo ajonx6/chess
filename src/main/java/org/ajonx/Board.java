@@ -9,6 +9,11 @@ import java.util.List;
 import java.util.Map;
 
 public class Board {
+	public static final int CASTLE_WHITE_KING = 0b0001;
+	public static final int CASTLE_WHITE_QUEEN = 0b0010;
+	public static final int CASTLE_BLACK_KING = 0b0100;
+	public static final int CASTLE_BLACK_QUEEN = 0b1000;
+
 	public int width;
 	public int height;
 	public int[] board;
@@ -16,12 +21,7 @@ public class Board {
 	public Map<Integer, PieceTracker> pieceMap = new HashMap<>();
 
 	public int enPassantTarget = -1;
-	public boolean whiteKingMove = false;
-	public boolean whiteRKMove = false;
-	public boolean whiteRQMove = false;
-	public boolean blackKingMove = false;
-	public boolean blackRKMove = false;
-	public boolean blackRQMove = false;
+	public int castlingRights = -1;
 
 	public Board(int width, int height) {
 		this.width = width;
@@ -29,13 +29,14 @@ public class Board {
 		this.board = new int[width * height];
 	}
 
-	public void loadFromFEN(String fen) {
+	public void loadGame(String fen) {
 		for (int type = Piece.KING; type <= Piece.PAWN; type++) {
 			pieceMap.put(type, new PieceTracker());
 		}
 
 		String[] sections = fen.split(" ");
 
+		// Section 0 - board layout
 		String[] ranks = sections[0].split("/");
 		for (int rank = 0; rank < height; rank++) {
 			String rankData = ranks[rank];
@@ -58,8 +59,20 @@ public class Board {
 			}
 		}
 
+		// Section 1 - turn
 		if (sections[1].equals("w")) colorToMove = Piece.WHITE;
 		else colorToMove = Piece.BLACK;
+
+		// Section 2 - castling rights
+		if (!sections[2].equals("-")) {
+			if (sections[2].contains("K")) castlingRights |= CASTLE_WHITE_KING;
+			if (sections[2].contains("Q")) castlingRights |= CASTLE_WHITE_QUEEN;
+			if (sections[2].contains("k")) castlingRights |= CASTLE_BLACK_KING;
+			if (sections[2].contains("q")) castlingRights |= CASTLE_BLACK_QUEEN;
+		}
+
+		// Others
+		enPassantTarget = -1;
 	}
 
 	public boolean isImmaterial() {
@@ -157,19 +170,6 @@ public class Board {
 		System.out.println();
 	}
 
-	public void resetGame() {
-		loadFromFEN("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
-		colorToMove = Piece.WHITE;
-
-		enPassantTarget = -1;
-		whiteKingMove = false;
-		whiteRKMove = false;
-		whiteRQMove = false;
-		blackKingMove = false;
-		blackRKMove = false;
-		blackRQMove = false;
-	}
-
 	public int indexOfKing(int colorToFind) {
 		// return pieceMap.get(Piece.KING).get(Piece.colorIndex(colorToFind)).get(0);
 		for (int i = 0; i < board.length; i++) {
@@ -197,5 +197,17 @@ public class Board {
 
 	public void set(int index, int piece) {
 		board[index] = piece;
+	}
+
+	public boolean hasCastleRight(int flag) {
+		return (castlingRights & flag) > 0;
+	}
+
+	public void removeCastleRight(int flag) {
+		castlingRights &= ~flag;
+	}
+
+	public int size() {
+		return width * height;
 	}
 }

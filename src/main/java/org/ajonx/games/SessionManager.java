@@ -6,7 +6,7 @@ import org.ajonx.pieces.Piece;
 import org.ajonx.games.cpu.CPU;
 import org.ajonx.moves.Move;
 import org.ajonx.moves.MoveHandler;
-import org.ajonx.moves.Moves;
+import org.ajonx.moves.MoveGenerator;
 
 public class SessionManager {
 	public int whiteWin = 0, blackWin = 0;
@@ -25,13 +25,7 @@ public class SessionManager {
 	public GameManager setupGame() {
 		GameManager game = new GameManager();
 
-		Board board = new Board(Window.GRID_SIZE, Window.GRID_SIZE);
-		MoveHandler moveHandler = new MoveHandler(board);
-		Moves.init(board, moveHandler);
-
 		game.headless();
-		game.setInstances(new GameInstances(null, board, moveHandler));
-
 		game.setWhiteCPU(whiteCPUTEmplate.copy(game, Piece.WHITE));
 		game.setBlackCPU(blackCPUTemplate.copy(game, Piece.BLACK));
 
@@ -40,25 +34,24 @@ public class SessionManager {
 
 	public void run() {
 		for (int i = 0; i < numGames; i++) {
-			GameManager game = setupGame();
+			GameManager gameManager = setupGame();
 			if ((i + 1) % 10 == 0) System.out.println("Game " + (i + 1) + " / " + numGames);
 
-			while (game.evaluateGameState() == GameState.ONGOING) {
-				CPU current = (game.instances.board.colorToMove == Piece.WHITE) ? game.whiteCPU : game.blackCPU;
-				Move move = current.pickMove(game.getLegalMoves());
-				int piece = game.instances.board.get(move.sfile, move.srank);
-				game.runTurn(move, piece);
+			while (gameManager.evaluateGameState() == GameState.ONGOING) {
+				CPU current = (gameManager.board.colorToMove == Piece.WHITE) ? gameManager.whiteCPU : gameManager.blackCPU;
+				Move move = current.pickMove(gameManager.getLegalMoves());
+				gameManager.runTurn(move);
 			}
 
-			recordResult(game);
+			recordResult(gameManager);
 		}
 
 		printSummary();
 	}
 
-	private void recordResult(GameManager game) {
-		GameState finalState = game.evaluateGameState();
-		int turn = game.instances.board.colorToMove;
+	private void recordResult(GameManager gameManager) {
+		GameState finalState = gameManager.evaluateGameState();
+		int turn = gameManager.board.colorToMove;
 
 		switch (finalState) {
 			case CHECKMATE -> {

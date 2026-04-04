@@ -1,5 +1,6 @@
 package org.ajonx;
 
+import org.ajonx.moves.Move;
 import org.ajonx.pieces.Piece;
 
 import java.util.ArrayList;
@@ -54,6 +55,14 @@ public class Board {
 		if (!sections[2].equals("-")) {}
 	}
 
+	public void makeMove(Move move) {
+		int piece = get(move.getFrom());
+		if (piece == Piece.INVALID) return;
+
+		set(move.getTo(), piece);
+		set(move.getFrom(), Piece.INVALID);
+	}
+
 	public void printBoard() {
 		for (int rank = height - 1; rank >= 0; rank--) {
 			for (int file = 0; file < width; file++) {
@@ -69,7 +78,7 @@ public class Board {
 	}
 
 	public int get(int file, int rank) {
-		return board[index(file, rank)];
+		return get(index(file, rank));
 	}
 
 	public int get(int index) {
@@ -77,6 +86,10 @@ public class Board {
 	}
 
 	public void set(int file, int rank, int piece) {
-		board[index(file, rank)] = piece;
+		set(index(file, rank), piece);
+	}
+
+	public void set(int index, int piece) {
+		board[index] = piece;
 	}
 }

@@ -4,6 +4,7 @@ import org.ajonx.Board;
 import org.ajonx.Colors;
 import org.ajonx.Constants;
 import org.ajonx.GameManager;
+import org.ajonx.moves.Move;
 import org.ajonx.pieces.Piece;
 import org.ajonx.pieces.PieceImages;
 
@@ -21,44 +22,9 @@ public class BoardPanel extends JPanel {
 
 	public BoardPanel(GameManager manager) {
 		this.manager = manager;
+		this.manager.addListener(this::repaint);
 
-		addMouseListener(new MouseListener() {
-			@Override
-			public void mouseClicked(MouseEvent e) {
-
-			}
-
-			@Override
-			public void mousePressed(MouseEvent e) {
-
-			}
-
-			@Override
-			public void mouseReleased(MouseEvent e) {
-
-			}
-
-			@Override
-			public void mouseEntered(MouseEvent e) {
-
-			}
-
-			@Override
-			public void mouseExited(MouseEvent e) {
-
-			}
-		});
-		addMouseMotionListener(new MouseMotionListener() {
-			@Override
-			public void mouseDragged(MouseEvent e) {
-
-			}
-
-			@Override
-			public void mouseMoved(MouseEvent e) {
-
-			}
-		});
+		addMouseListener(new BoardPanelMouseListener());
 		addKeyListener(new KeyListener() {
 			@Override
 			public void keyTyped(KeyEvent e) {
@@ -135,11 +101,45 @@ public class BoardPanel extends JPanel {
 
 	}
 
+	private int toFile(int uiX) {
+		return uiX / Constants.CELL_SIZE;
+	}
+
 	private int toUIX(int file) {
 		return file * Constants.CELL_SIZE;
 	}
 
+	private int toRank(int uiY) {
+		return Constants.GRID_SIZE - 1 - uiY / Constants.CELL_SIZE;
+	}
+
 	private int toUIY(int rank) {
 		return (Constants.GRID_SIZE - 1 - rank) * Constants.CELL_SIZE;
+	}
+
+	private int toIndex(int file, int rank) {
+		return rank * Constants.GRID_SIZE + file;
+	}
+
+	private class BoardPanelMouseListener implements MouseListener {
+		public void mouseClicked(MouseEvent e) {}
+
+		public void mousePressed(MouseEvent e) {
+			int file = toFile(e.getX());
+			int rank = toRank(e.getY());
+			int index = toIndex(file, rank);
+
+			if (selectedSquare == -1) selectedSquare = index;
+			else {
+				manager.makeMove(new Move(selectedSquare, index));
+				selectedSquare = -1;
+			}
+		}
+
+		public void mouseReleased(MouseEvent e) {}
+
+		public void mouseEntered(MouseEvent e) {}
+
+		public void mouseExited(MouseEvent e) {}
 	}
 }

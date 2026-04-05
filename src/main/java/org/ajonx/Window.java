@@ -20,10 +20,11 @@ public class Window {
 
 	public Window() {
 		PieceImages.init("pieces.png", 6, 2, PieceImages.getDefaultPieceList(), Piece.BLACK | Piece.PAWN);
+		Piece.initMoveGenerators();
 
 		Board board = new Board(Constants.GRID_SIZE, Constants.GRID_SIZE);
-		board.loadDefaultGame();
 		manager = new GameManager(board);
+		manager.initGame();
 
 		frame = new JFrame("Chess");
 		frame.setUndecorated(true);

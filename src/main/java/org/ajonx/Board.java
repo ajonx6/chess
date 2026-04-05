@@ -12,7 +12,6 @@ public class Board {
 	public int[] board;
 
 	public List<Integer> pieces = new ArrayList<>();
-	public int colorToMove = Piece.WHITE;
 
 	public Board(int width, int height) {
 		this.width = width;
@@ -20,11 +19,11 @@ public class Board {
 		this.board = new int[width * height];
 	}
 
-	public void loadDefaultGame() {
-		loadGame("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+	public int loadDefaultGame() {
+		return loadGame("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
 	}
 
-	public void loadGame(String fen) {
+	public int loadGame(String fen) {
 		String[] sections = fen.split(" ");
 
 		// Section 0 - board layout
@@ -47,12 +46,15 @@ public class Board {
 			}
 		}
 
+		int colorToMove = Piece.INVALID;
 		// Section 1 - turn
 		if (sections[1].equals("w")) colorToMove = Piece.WHITE;
 		else colorToMove = Piece.BLACK;
 
 		// Section 2 - castling rights
 		if (!sections[2].equals("-")) {}
+
+		return colorToMove;
 	}
 
 	public void makeMove(Move move) {
@@ -61,6 +63,10 @@ public class Board {
 
 		set(move.getTo(), piece);
 		set(move.getFrom(), Piece.INVALID);
+	}
+
+	public void promote(Move move) {
+		set(move.getTo(), move.getPromotionPiece());
 	}
 
 	public void printBoard() {

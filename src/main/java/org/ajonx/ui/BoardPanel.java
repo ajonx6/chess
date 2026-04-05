@@ -1,9 +1,6 @@
 package org.ajonx.ui;
 
-import org.ajonx.Board;
-import org.ajonx.Colors;
-import org.ajonx.Constants;
-import org.ajonx.GameManager;
+import org.ajonx.*;
 import org.ajonx.moves.Move;
 import org.ajonx.pieces.Piece;
 import org.ajonx.pieces.PieceImages;
@@ -12,19 +9,24 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
 import java.awt.image.BufferedImage;
+import java.util.*;
+import java.util.List;
 
 public class BoardPanel extends JPanel {
 	private GameManager manager;
 
 	private int mouseX, mouseY;
-	private boolean dragging = false;
 	private int selectedSquare = -1;
+	private int selectedPiece = Piece.INVALID;
+	private List<Move> movesForPiece = new ArrayList<>();
 
 	public BoardPanel(GameManager manager) {
 		this.manager = manager;
 		this.manager.addListener(this::repaint);
 
-		addMouseListener(new BoardPanelMouseListener());
+		BoardPanelMouseListener mouseListener = new BoardPanelMouseListener();
+		addMouseListener(mouseListener);
+		addMouseMotionListener(mouseListener);
 		addKeyListener(new KeyListener() {
 			@Override
 			public void keyTyped(KeyEvent e) {
@@ -65,7 +67,7 @@ public class BoardPanel extends JPanel {
 	private void drawSquares(Graphics2D g2d) {
 		for (int rank = 0; rank < Constants.GRID_SIZE; rank++) {
 			for (int file = 0; file < Constants.GRID_SIZE; file++) {
-				int uiX = toUIX(file), uiY = toUIY(rank);
+				int uiX = toXCoord(file), uiY = toYCoord(rank);
 
 				Color color = getSquareColor(file, rank);
 				g2d.setColor(color);
@@ -76,7 +78,19 @@ public class BoardPanel extends JPanel {
 
 	private Color getSquareColor(int file, int rank) {
 		boolean isLight = (file + rank) % 2 == 1;
-		return Colors.getColor(Colors.DEFAULT_COLORS, isLight);
+		Color[] theme = Colors.DEFAULT_COLORS;
+		int square = Util.toIndex(file, rank);
+
+		if (selectedPiece != Piece.INVALID && !movesForPiece.isEmpty()) {
+			boolean isTarget = movesForPiece.stream().anyMatch(m -> m.getTo() == square);
+			if (isTarget) theme = Colors.MOVE_COLORS;
+		} else if (manager.getPreviousMove().getFrom() == square) {
+			theme = Colors.PREV_FROM_COLORS;
+		} else if (manager.getPreviousMove().getTo() == square) {
+			theme = Colors.PREV_TO_COLORS;
+		}
+
+		return Colors.getColor(theme, isLight);
 	}
 
 	private void drawPieces(Graphics2D g2d, Board board) {
@@ -84,7 +98,8 @@ public class BoardPanel extends JPanel {
 
 		for (int rank = 0; rank < Constants.GRID_SIZE; rank++) {
 			for (int file = 0; file < Constants.GRID_SIZE; file++) {
-				int uiX = toUIX(file), uiY = toUIY(rank);
+				int uiX = toXCoord(file), uiY = toYCoord(rank);
+				if (selectedSquare == Util.toIndex(file, rank)) continue;
 
 				int piece = board.get(board.index(file, rank));
 				if (piece != Piece.INVALID) {
@@ -97,49 +112,70 @@ public class BoardPanel extends JPanel {
 		g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_OFF);
 	}
 
-	private void drawPickedUp(Graphics g) {
+	private void drawPickedUp(Graphics2D g2d) {
+		if (selectedPiece == Piece.INVALID) return;
 
+		BufferedImage pieceImage = PieceImages.getImage(selectedPiece);
+		g2d.drawImage(pieceImage, mouseX - Constants.CELL_SIZE / 2, mouseY - Constants.CELL_SIZE / 2, Constants.CELL_SIZE, Constants.CELL_SIZE, null);
 	}
 
-	private int toFile(int uiX) {
-		return uiX / Constants.CELL_SIZE;
+	public static int toFileFromCoord(int x) {
+		return x / Constants.CELL_SIZE;
 	}
 
-	private int toUIX(int file) {
+	public static int toXCoord(int file) {
 		return file * Constants.CELL_SIZE;
 	}
 
-	private int toRank(int uiY) {
-		return Constants.GRID_SIZE - 1 - uiY / Constants.CELL_SIZE;
+	public static int toRankFromCoord(int y) {
+		return Constants.GRID_SIZE - 1 - y / Constants.CELL_SIZE;
 	}
 
-	private int toUIY(int rank) {
+	public static int toYCoord(int rank) {
 		return (Constants.GRID_SIZE - 1 - rank) * Constants.CELL_SIZE;
 	}
 
-	private int toIndex(int file, int rank) {
-		return rank * Constants.GRID_SIZE + file;
-	}
-
-	private class BoardPanelMouseListener implements MouseListener {
-		public void mouseClicked(MouseEvent e) {}
-
+	private class BoardPanelMouseListener implements MouseListener, MouseMotionListener {
 		public void mousePressed(MouseEvent e) {
-			int file = toFile(e.getX());
-			int rank = toRank(e.getY());
-			int index = toIndex(file, rank);
+			if (selectedPiece != Piece.INVALID) return;
 
-			if (selectedSquare == -1) selectedSquare = index;
-			else {
-				manager.makeMove(new Move(selectedSquare, index));
-				selectedSquare = -1;
-			}
+			int file = toFileFromCoord(e.getX());
+			int rank = toRankFromCoord(e.getY());
+			selectedSquare = Util.toIndex(file, rank);
+			selectedPiece = manager.getBoard().get(selectedSquare);
+			movesForPiece = manager.getAllMovesThisTurn().containsKey(selectedSquare) ? manager.getAllMovesThisTurn().get(selectedSquare) : new ArrayList<>();
 		}
 
-		public void mouseReleased(MouseEvent e) {}
+		public void mouseReleased(MouseEvent e) {
+			if (selectedPiece == Piece.INVALID) return;
+
+			if (!movesForPiece.isEmpty()) {
+				int file = toFileFromCoord(e.getX());
+				int rank = toRankFromCoord(e.getY());
+				int endSquare = Util.toIndex(file, rank);
+				Move move = movesForPiece.stream().filter(m -> m.getTo() == endSquare).findFirst().orElse(null);
+				if (move != null) manager.makeMove(move);
+			}
+
+			selectedSquare = -1;
+			selectedPiece = Piece.INVALID;
+			repaint();
+		}
+
+		public void mouseDragged(MouseEvent e) {
+			mouseX = e.getX();
+			mouseY = e.getY();
+			repaint();
+		}
+
+		public void mouseClicked(MouseEvent e) {}
 
 		public void mouseEntered(MouseEvent e) {}
 
 		public void mouseExited(MouseEvent e) {}
+
+		public void mouseMoved(MouseEvent e) {
+
+		}
 	}
 }

@@ -81,9 +81,10 @@ public class BoardPanel extends JPanel {
 		Color[] theme = Colors.DEFAULT_COLORS;
 		int square = Util.toIndex(file, rank);
 
-		if (selectedPiece != Piece.INVALID && !movesForPiece.isEmpty()) {
-			boolean isTarget = movesForPiece.stream().anyMatch(m -> m.getTo() == square);
-			if (isTarget) theme = Colors.MOVE_COLORS;
+		if (selectedPiece != Piece.INVALID && !movesForPiece.isEmpty() && movesForPiece.stream().anyMatch(m -> m.getTo() == square)) {
+			theme = Colors.MOVE_COLORS;
+		} else if (selectedPiece != Piece.INVALID && square == selectedSquare) {
+			theme = Colors.CURRENT_COLORS;
 		} else if (manager.getPreviousMove().getFrom() == square) {
 			theme = Colors.PREV_FROM_COLORS;
 		} else if (manager.getPreviousMove().getTo() == square) {

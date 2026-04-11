@@ -18,14 +18,15 @@ public class PawnMoveRule implements PieceMoveRule {
 		int direction = (color == Piece.WHITE) ? 1 : -1;
 		int startRank = (color == Piece.WHITE) ? 1 : 6;
 		int promotionRank = (color == Piece.WHITE) ? 7 : 0;
+		int enPassantSquare = board.getEnpassantSquare();
 
 		int forwardSquare = square + direction * 8;
 		if (forwardSquare >= 0 && forwardSquare < Constants.NUM_CELLS && board.get(forwardSquare) == Piece.INVALID) {
+			Move move = new Move(square, forwardSquare);
 			if (forwardSquare / 8 == promotionRank) {
-				moves.add(new Move(square, forwardSquare, Piece.QUEEN | color));
-			} else {
-				moves.add(new Move(square, forwardSquare));
+				move.setPromotionPiece(Piece.QUEEN | color);
 			}
+			moves.add(move);
 
 			if (rank == startRank) {
 				int doubleForward = square + direction * 16;
@@ -47,11 +48,17 @@ public class PawnMoveRule implements PieceMoveRule {
 
 			int targetPiece = board.get(targetSquare);
 			if (Piece.isOppositeColor(targetPiece, color)) {
+				Move move = new Move(square, targetSquare);
 				if (targetRank == promotionRank) {
-					moves.add(new Move(square, targetSquare, Piece.QUEEN | color));
-				} else {
-					moves.add(new Move(square, targetSquare));
+					move.setPromotionPiece(Piece.QUEEN | color);
 				}
+				moves.add(move);
+			}
+
+			if (targetSquare == enPassantSquare) {
+				Move epMove = new Move(square, targetSquare);
+				epMove.setEnpassant(true);
+				moves.add(epMove);
 			}
 		}
 

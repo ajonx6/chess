@@ -7,11 +7,18 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class Board {
+	public static final int CASTLE_WHITE_KING = 0b0001;
+	public static final int CASTLE_WHITE_QUEEN = 0b0010;
+	public static final int CASTLE_BLACK_KING = 0b0100;
+	public static final int CASTLE_BLACK_QUEEN = 0b1000;
+
 	public int width;
 	public int height;
 	public int[] board;
 
 	public List<Integer> pieces = new ArrayList<>();
+	private int enpassantSquare = -1;
+	private int castlingRights = 0;
 
 	public Board(int width, int height) {
 		this.width = width;
@@ -46,13 +53,26 @@ public class Board {
 			}
 		}
 
-		int colorToMove = Piece.INVALID;
+		int colorToMove;
 		// Section 1 - turn
 		if (sections[1].equals("w")) colorToMove = Piece.WHITE;
 		else colorToMove = Piece.BLACK;
 
 		// Section 2 - castling rights
-		if (!sections[2].equals("-")) {}
+		if (sections[2].contains("K")) {
+			castlingRights |= CASTLE_WHITE_KING;
+		}
+		if (sections[2].contains("Q")) {
+			castlingRights |= CASTLE_WHITE_QUEEN;
+		}
+		if (sections[2].contains("k")) {
+			castlingRights |= CASTLE_BLACK_KING;
+		}
+		if (sections[2].contains("q")) {
+			castlingRights |= CASTLE_BLACK_QUEEN;
+		}
+
+		System.out.println(Integer.toBinaryString(castlingRights));
 
 		return colorToMove;
 	}
@@ -67,6 +87,14 @@ public class Board {
 
 	public void promote(Move move) {
 		set(move.getTo(), move.getPromotionPiece());
+	}
+
+	public void loseCastlingRight(int flag) {
+		castlingRights &= ~flag;
+	}
+
+	public boolean hasCastlingRight(int flag) {
+		return (castlingRights & flag) != 0;
 	}
 
 	public void printBoard() {
@@ -97,5 +125,17 @@ public class Board {
 
 	public void set(int index, int piece) {
 		board[index] = piece;
+	}
+
+	public int getEnpassantSquare() {
+		return enpassantSquare;
+	}
+
+	public void setEnpassantSquare(int enpassantSquare) {
+		this.enpassantSquare = enpassantSquare;
+	}
+
+	public int getCastlingRights() {
+		return castlingRights;
 	}
 }

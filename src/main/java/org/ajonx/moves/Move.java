@@ -6,16 +6,12 @@ import java.util.Objects;
 
 public class Move {
 	private final int from, to;
-	private final int promotionPiece;
+	private int promotionPiece;
+	private boolean enpassant;
 
 	public Move(int from, int to) {
-		this(from, to, Piece.INVALID);
-	}
-
-	public Move(int from, int to, int promotionPiece) {
 		this.from = from;
 		this.to = to;
-		this.promotionPiece = promotionPiece;
 	}
 
 	public int getFrom() {
@@ -28,6 +24,18 @@ public class Move {
 
 	public int getPromotionPiece() {
 		return promotionPiece;
+	}
+
+	public void setPromotionPiece(int promotionPiece) {
+		this.promotionPiece = promotionPiece;
+	}
+
+	public boolean isEnpassant() {
+		return enpassant;
+	}
+
+	public void setEnpassant(boolean enpassant) {
+		this.enpassant = enpassant;
 	}
 
 	@Override
